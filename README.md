@@ -1,3 +1,4 @@
 # dirtydentist
-Simple and dirty GUI-library for Defold developed for educational software at the dentistry program.
-Includes dropboxes, comboboxes, buttons, checkboxes, radiobuttons,textfields and textboxes. The textboxes and fields include the possibility to edit middle of the string. 
+A simple GUI library for Defold has been crafted for educational software in a dentistry program. 
+It covers essentials like drop-down menus, buttons, checkboxes, radio buttons, and text fields. 
+Notably, the text components allow for mid-string editing.
