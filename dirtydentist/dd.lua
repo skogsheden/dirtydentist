@@ -471,7 +471,10 @@ function dropdown_interact(self, action_id, action, node, list, enabled)
 		end
 
 		-- Scrolling is enabeled when more than 7 items in dropdown
-		if dd[count] > 7 then
+		if dd[count] < 7 then
+			gui.set_enabled(dragpos, false)
+		elseif dd[count] > 7 then
+			gui.set_enabled(dragpos, true)
 			-- Scrollwheel
 			if dd[isOpen] and action_id == hash("wheelup") and gui.pick_node(dd_obj, action.x, action.y) then
 				local currentPos = gui.get_position(dd_obj)
@@ -680,7 +683,10 @@ function combobox_interact(self, action_id, action, node, list, enabled)
 			dd[isOpen] = true
 		end
 
-		if dd[count] > 7 then
+		if dd[count] < 7 then
+			gui.set_enabled(dragpos, false)
+		elseif dd[count] > 7 then
+			gui.set_enabled(dragpos, true)
 			-- Scrollwheel
 			if dd[isOpen] and action_id == hash("wheelup") and gui.pick_node(dd_obj, action.x, action.y) then
 				local currentPos = gui.get_position(dd_obj)
