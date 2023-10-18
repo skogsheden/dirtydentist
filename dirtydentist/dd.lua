@@ -124,8 +124,8 @@ function checkbox(self, action_id, action, node, enabled)
 			gui.set_color(bgNode, colors.active)
 		end
 		dd.activeNode = nil
-		return dd[selected]
 	end
+	return dd[selected]
 end
 
 function button_enabled(self, node, enabled)
