@@ -4,7 +4,7 @@ embedded_instances {
   id: "go"
   data: "components {\n"
   "  id: \"dd-test\"\n"
-  "  component: \"/example/dd_ten.gui\"\n"
+  "  component: \"/example/dd_test.gui\"\n"
   "  position {\n"
   "    x: 0.0\n"
   "    y: 0.0\n"

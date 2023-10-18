@@ -44,22 +44,6 @@ function init(self)
 	dropdown_init(self, "comboFyra", jedilist, true)
 end
 
-function final(self)
-	-- Add finalization code here
-	-- Learn more: https://defold.com/manuals/script/
-	-- Remove this function if not needed
-end
-
-function update(self, dt)
-
-end
-
-function on_message(self, message_id, message, sender)
-	-- Add message-handling code here
-	-- Learn more: https://defold.com/manuals/message-passing/
-	-- Remove this function if not needed
-end
-
 function on_input(self, action_id, action)
 	dropdown_interact(self, action_id, action, "ddEtt",jedilist, true)
 	dropdown_interact(self, action_id, action, "ddTva",{"ett","två"},true)
@@ -79,10 +63,4 @@ function on_input(self, action_id, action)
 	checkbox(self, action_id, action, "checkEtt", true)
 
 	radio(self, action_id, action, 1, {"radioEtt", "radioTva"}, true)
-end
-
-function on_reload(self)
-	-- Add reload-handling code here
-	-- Learn more: https://defold.com/manuals/hot-reload/
-	-- Remove this function if not needed
 end
