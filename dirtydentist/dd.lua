@@ -125,6 +125,7 @@ function checkbox(self, action_id, action, node, enabled)
 		end
 		dd.activeNode = nil
 	end
+	--return value
 	return dd[selected]
 end
 
