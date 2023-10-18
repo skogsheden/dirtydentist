@@ -98,7 +98,11 @@ end
 function checkbox(self, action_id, action, node, enabled)
 	-- Check if can be activated
 	local bgNode = gui.get_node(node .. "/bg")
+
 	local selected  = node .. "selected"
+	if dd[selected] == nil then
+		dd[selected] = false
+	end
 	
 	if dd.activeNode == nil and gui.pick_node(bgNode, action.x, action.y) and enabled then
 		dd.activeNode = node
@@ -107,9 +111,6 @@ function checkbox(self, action_id, action, node, enabled)
 	end
 	
 	if dd.activeNode == node then 
-		if dd[selected] == nil then
-			dd[selected] = false
-		end
 		if gui.pick_node(bgNode, action.x, action.y) then
 			gui.set_color(bgNode, colors.hover)
 			if action_id == hash("touch") and action.pressed and dd[selected] then
