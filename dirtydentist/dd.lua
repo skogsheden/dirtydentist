@@ -23,6 +23,11 @@ colors.red = vmath.vector4(1,0.1,0.1,1)
 local noentries = "No entries found"
 local selectavalue = "Select a value"
 
+function localisationofstrings(nonfound, select)
+	noentries = nonfound
+	selectavalue = select
+end
+
 -- Check if node is the active Node
 local function isActive(node)
 	if dd.activeNode == node then

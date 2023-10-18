@@ -2,6 +2,9 @@ require "dirtydentist.dd"
 
 function init(self)
 	msg.post(".", "acquire_input_focus")
+
+	localisationofstrings("Ingen hittades", "Välj ett värde")
+	
 	jedilist = {
 		"Luke Skywalker",
 		"Obi-Wan Kenobi",
