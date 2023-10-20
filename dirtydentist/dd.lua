@@ -271,8 +271,8 @@ function text_input(self, action_id, action, node, enabled)
 				print("nothing to delete")
 			end
 		end
-		return gui.get_text(textNode)
 	end
+	return gui.get_text(textNode)
 end
 
 -- Dropdown and combobox initiater
@@ -962,14 +962,14 @@ function textbox_input(self, action_id, action, node, enabled)
 				end
 			end
 		end
-		-- Gather return string
-		if dd[input] then
-			local returnstring = ""
-			for i = 1, #dd[lines] do
-				returnstring = returnstring .. gui.get_text(dd[lines][i].text) .. "\n"
-			end
-			return returnstring
+	end
+	-- Gather return string
+	if dd[input] then
+		local returnstring = ""
+		for i = 1, #dd[lines] do
+			returnstring = returnstring .. gui.get_text(dd[lines][i].text) .. "\n"
 		end
+		return returnstring
 	end
 end
 
