@@ -53,9 +53,11 @@ function on_input(self, action_id, action)
 	dropdown_interact(self, action_id, action, "ddTre",{"ett","två"},true)
 	dropdown_interact(self, action_id, action, "ddFyra",jedilist,true)
 	
-	textbox_input(self, action_id, action, "box", true)
-	text_input(self, action_id, action, "input", true)
+	text = textbox_input(self, action_id, action, "box", true)
+	text2 = text_input(self, action_id, action, "input", true)
+	print(text)
 
+	
 	combobox_interact(self, action_id, action, "comboEtt", jedilist,true)
 	combobox_interact(self, action_id, action, "comboTva", jedilist,true)
 	combobox_interact(self, action_id, action, "comboTre", jedilist,false)

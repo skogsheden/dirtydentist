@@ -175,6 +175,8 @@ end
 function text_input(self, action_id, action, node, enabled)	
 	-- Check if can be activated
 	local bgNode = gui.get_node(node .. "/bg")
+	local textNode = gui.get_node(node .. "/text")
+	
 	if dd.activeNode == nil and gui.pick_node(bgNode, action.x, action.y) and enabled then
 		dd.activeNode = node -- Active node if touched and no other is active
 	elseif not enabled then
@@ -183,7 +185,6 @@ function text_input(self, action_id, action, node, enabled)
 	-- Recieve input
 	if dd.activeNode == node then
 		-- Get the other subnodes
-		local textNode = gui.get_node(node .. "/text")
 		local hiddenText = gui.get_node(node .. "/hiddentext") -- Hidden text for comparision
 		local markerNode = gui.get_node(node .. "/marker")
 
@@ -761,6 +762,8 @@ function textbox_input(self, action_id, action, node, enabled)
 	elseif not enabled then
 		gui.set_color(bgNode, colors.inactive)
 	end
+	local lines = node .. "lines"
+	
 	-- Recieve input
 	if dd.activeNode == node then
 		local textNode = gui.get_node(node .. "/text")
@@ -768,7 +771,6 @@ function textbox_input(self, action_id, action, node, enabled)
 		local markerNode = gui.get_node(node .. "/marker")
 		local innerbox = gui.get_node(node .. "/innerbox")
 		local carrier = gui.get_node(node .. "/carrier")
-		local lines = node .. "lines"
 		local linescount = node .. "count"
 		local active = node .. "activeline"
 		local input = node .. "input"
