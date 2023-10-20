@@ -964,7 +964,7 @@ function textbox_input(self, action_id, action, node, enabled)
 		end
 	end
 	-- Gather return string
-	if dd[input] then
+	if dd[lines] ~= nil then
 		local returnstring = ""
 		for i = 1, #dd[lines] do
 			returnstring = returnstring .. gui.get_text(dd[lines][i].text) .. "\n"
