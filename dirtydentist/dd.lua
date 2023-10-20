@@ -810,7 +810,7 @@ function textbox_input(self, action_id, action, node, enabled)
 				gui.set_enabled(dd[lines][i].marker, true) -- Enable marker
 				gui.set_screen_position(dd[lines][i].marker, vmath.vector3(action.x,action.y,0)) -- Set marker at click position
 				markpos = gui.get_position(dd[lines][i].marker) -- Convert to local pos
-				markpos.y = 0 -- Set y position to 0 to keep in middle of box
+				markpos.y = -10 -- Set y position to 0 to keep in middle of box
 				gui.set_position(dd[lines][i].marker, markpos) -- Update
 				gui.set_text(dd[lines][i].hidden, gui.get_text(dd[lines][i].text))
 				if utf8.len(gui.get_text(dd[lines][i].hidden)) >= 1 then -- If two or more letters allow editing
@@ -845,11 +845,11 @@ function textbox_input(self, action_id, action, node, enabled)
 				gui.set_position(dd[lines][dd[active]].marker, markerPos)
 			elseif utf8.len(gui.get_text(dd[lines][dd[active]].hidden)) == utf8.len(gui.get_text(dd[lines][dd[active]].text)) then -- If equal add text at the end
 				local markerPos = gui.get_position(dd[lines][dd[active]].marker)
-				local text = gui.get_text(dd[lines][dd[active]].hidden)
+				local text = gui.get_text(dd[lines][dd[active]].text)
 				text = text .. action.text
 				gui.set_text(dd[lines][dd[active]].hidden, text)
 				gui.set_text(dd[lines][dd[active]].text, text)
-				markerPos.x = gui.get_text_metrics_from_node(dd[lines][dd[active]].hidden).width
+				markerPos.x = gui.get_text_metrics_from_node(dd[lines][dd[active]].text).width
 				gui.set_position(dd[lines][dd[active]].marker, markerPos)
 			end
 		elseif action_id == hash("text") and dd[input] and gui.get_text_metrics_from_node(dd[lines][dd[active]].text).width >= (gui.get_size(bgNode).x-25) then
@@ -1020,7 +1020,7 @@ end
 
 function sortlines (node, list)
 	for i = 1, #list do
-		gui.set_position(list[i].innerbox, vmath.vector3(0,-20 * (i-1) -5,0)) 
+		gui.set_position(list[i].innerbox, vmath.vector3(5,-20 * (i-1) -5,0)) 
 	end
 
 	local carrier = gui.get_node(node .. "/carrier")
