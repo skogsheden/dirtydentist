@@ -277,11 +277,12 @@ function text_input(self, action_id, action, node, enabled)
 end
 
 -- Dropdown and combobox initiater
-function dropdown_init(self, node, list, openUpwards, set_value, enabled)
+function dropdown_init(self, node, list, openUpwards, set_value, enabled, id)
 	-- get nodes
 	local textbox = gui.get_node(node .. "/textbox")
 	local mask = gui.get_node(node .. "/mask")
 	local dd_obj = gui.get_node(node .. "/dddrag")
+	local id_obj = gui.get_node(node .. "/ID")
 	-- and variables
 	local selectedValue = node .. "selectedValue"
 	local isOpen = node .. "isOpen"
@@ -300,7 +301,6 @@ function dropdown_init(self, node, list, openUpwards, set_value, enabled)
 	dd[scrolling] = false -- Not scrolling
 
 	-- choose side to which way to isOpen
-	
 	if openUpwards then
 		local pos = gui.get_position(mask)
 		pos.y = pos.y + 230
@@ -314,6 +314,11 @@ function dropdown_init(self, node, list, openUpwards, set_value, enabled)
 		gui.set_color(textbox, colors.inactive)
 	end
 	gui.set_enabled(mask, false)
+
+	-- If id avilable set id_obj
+	if gui.get_text(id_obj) ~= nil then
+		gui.set_text(id_obj, id)
+	end
 end
 
 -- Local function to delete all objects in the dropdown objects
