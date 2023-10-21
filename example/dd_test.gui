@@ -6521,7 +6521,7 @@ nodes {
   layer: ""
   inherit_alpha: true
   alpha: 1.0
-  template: "/dirtydentist/slider.gui"
+  template: "/dirtydentist/slider_prefab.gui"
   template_node_child: false
   custom_type: 0
   enabled: true
