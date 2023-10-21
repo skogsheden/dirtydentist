@@ -47,6 +47,45 @@ local function valuelimit(v, min, max)
 	return v
 end
 
+function slider(self, action_id, action, node)
+	-- Check if can be activated
+	local bgNode = gui.get_node(node .. "/bg")
+	-- Check if can be actiavted
+	if dd.activeNode == nil and gui.pick_node(bgNode, action.x, action.y) then
+		dd.activeNode = node
+	end
+
+	-- if active
+	if dd.activeNode == node then
+		local slidebg = gui.get_node(node .. "/slider_bg")
+		local slidelevel = gui.get_node(node .. "/slider_level")
+		local handle = gui.get_node(node .. "/handle")
+		
+		local slider_size = gui.get_size(slidebg)
+		local slider_fillsize = gui.get_size(slidelevel)
+		local slider_fillpos = gui.get_screen_position(slidelevel)
+		local handle_size = gui.get_size(handle)
+		local handle_pos = gui.get_position(handle)
+		
+		local handle_start = gui.get_screen_position(handle)
+
+		if action_id == hash("touch") and gui.pick_node(handle, action.x, action.y) and not action.released then
+			gui.set_screen_position(handle, vmath.vector3(valuelimit(action.x, slider_fillpos.x, slider_fillpos.x + slider_size.x),handle_start.y, handle_start.z ))
+			gui.set_size(slidelevel, vmath.vector3(gui.get_position(handle).x + (slider_size.x/2), slider_fillsize.y, slider_fillsize.z))
+		end
+		if action_id == hash("touch") and gui.pick_node(slidebg, action.x, action.y) and action.pressed and not gui.pick_node(handle, action.x, action.y) then
+			gui.set_screen_position(handle, vmath.vector3(valuelimit(action.x, slider_fillpos.x, slider_fillpos.x + slider_size.x),handle_start.y, handle_start.z ))
+			gui.set_size(slidelevel, vmath.vector3(gui.get_position(handle).x + (slider_size.x/2), slider_fillsize.y, slider_fillsize.z))
+		end
+		dd[node .. "value"] = math.abs(gui.get_position(handle).x)/(slider_size.x/2)
+		if action_id == hash("touch") and action.released then
+			dd.activeNode = nil
+		end
+	end
+	return dd[node .. "value"]
+end
+
+ 
 -- Radiobuttons takes action, which groups the current button belongs to, current node and if it should be enabled
 function radio(self, action_id, action, group, nodes, enabled)
 	-- if more then one radiobutton
@@ -282,7 +321,6 @@ function dropdown_init(self, node, list, openUpwards, set_value, enabled, id)
 	local textbox = gui.get_node(node .. "/textbox")
 	local mask = gui.get_node(node .. "/mask")
 	local dd_obj = gui.get_node(node .. "/dddrag")
-	local id_obj = gui.get_node(node .. "/ID")
 	-- and variables
 	local selectedValue = node .. "selectedValue"
 	local isOpen = node .. "isOpen"
@@ -300,6 +338,14 @@ function dropdown_init(self, node, list, openUpwards, set_value, enabled, id)
 	dd[isOpen] = false -- start as closed
 	dd[scrolling] = false -- Not scrolling
 
+	-- If id avilable set id_obj
+	if id ~= nil then 
+		local id_obj = gui.get_node(node .. "/ID")
+		if gui.get_text(id_obj) ~= nil then
+			gui.set_text(id_obj, id)
+		end
+	end
+	
 	-- choose side to which way to isOpen
 	if openUpwards then
 		local pos = gui.get_position(mask)
@@ -314,11 +360,6 @@ function dropdown_init(self, node, list, openUpwards, set_value, enabled, id)
 		gui.set_color(textbox, colors.inactive)
 	end
 	gui.set_enabled(mask, false)
-
-	-- If id avilable set id_obj
-	if gui.get_text(id_obj) ~= nil then
-		gui.set_text(id_obj, id)
-	end
 end
 
 -- Local function to delete all objects in the dropdown objects

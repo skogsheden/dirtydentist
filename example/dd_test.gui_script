@@ -48,6 +48,8 @@ function init(self)
 end
 
 function on_input(self, action_id, action)
+	slider(self, action_id, action, "slider")
+	
 	dropdown_interact(self, action_id, action, "ddEtt",jedilist, true)
 	dropdown_interact(self, action_id, action, "ddTva",{"ett","två"},true)
 	dropdown_interact(self, action_id, action, "ddTre",{"ett","två"},true)
