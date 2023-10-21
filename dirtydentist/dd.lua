@@ -54,6 +54,9 @@ function slider(self, action_id, action, node)
 	if dd.activeNode == nil and gui.pick_node(bgNode, action.x, action.y) then
 		dd.activeNode = node
 	end
+	if dd[node .. "value"] == nil then
+		dd[node .. "value"] = 0
+	end
 
 	-- if active
 	if dd.activeNode == node then
@@ -137,7 +140,6 @@ end
 function checkbox(self, action_id, action, node, enabled)
 	-- Check if can be activated
 	local bgNode = gui.get_node(node .. "/bg")
-
 	local selected  = node .. "selected"
 	if dd[selected] == nil then
 		dd[selected] = false
