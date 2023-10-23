@@ -59,7 +59,7 @@ function slider(self, action_id, action, node)
 	local slider_fillsize = gui.get_size(slidelevel)
 	local slider_fillpos = gui.get_screen_position(slidelevel)
 	local handle_pos = gui.get_position(handle)
-	local handle_start = vmath.vector3(0,0,0)
+	local handle_start = gui.get_screen_position(handle)
 	
 	-- Check if can be actiavted
 	if dd.activeNode == nil and gui.pick_node(bgNode, action.x, action.y) then
