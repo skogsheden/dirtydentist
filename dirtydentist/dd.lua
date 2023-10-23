@@ -84,7 +84,6 @@ function slider(self, action_id, action, node)
 			gui.set_screen_position(handle, vmath.vector3(valuelimit(action.x, slider_fillpos.x, slider_fillpos.x + slider_size.x),handle_start.y, handle_start.z ))
 			gui.set_size(slidelevel, vmath.vector3(gui.get_position(handle).x + (slider_size.x/2), slider_fillsize.y, slider_fillsize.z))
 		end
-		dd[node .. "value"] = gui.get_position(handle).x/(slider_size.x/2)
 		if action_id == hash("touch") and action.released then
 			dd.activeNode = nil
 		end
@@ -94,6 +93,7 @@ function slider(self, action_id, action, node)
 		end
 			
 	end
+	dd[node .. "value"] = gui.get_position(handle).x/(slider_size.x/2)
 	return dd[node .. "value"]
 end
 
