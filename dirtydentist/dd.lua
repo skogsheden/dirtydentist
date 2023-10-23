@@ -59,7 +59,7 @@ function slider(self, action_id, action, node)
 	end
 
 	-- if active
-	if dd.activeNode == node then
+	if dd.activeNode == node or dd[node .. "activeslider"]  then
 		local slidebg = gui.get_node(node .. "/slider_bg")
 		local slidelevel = gui.get_node(node .. "/slider_level")
 		local handle = gui.get_node(node .. "/handle")
@@ -67,12 +67,16 @@ function slider(self, action_id, action, node)
 		local slider_size = gui.get_size(slidebg)
 		local slider_fillsize = gui.get_size(slidelevel)
 		local slider_fillpos = gui.get_screen_position(slidelevel)
-		local handle_size = gui.get_size(handle)
 		local handle_pos = gui.get_position(handle)
 		
 		local handle_start = gui.get_screen_position(handle)
 
 		if action_id == hash("touch") and gui.pick_node(handle, action.x, action.y) and not action.released then
+			gui.set_screen_position(handle, vmath.vector3(valuelimit(action.x, slider_fillpos.x, slider_fillpos.x + slider_size.x),handle_start.y, handle_start.z ))
+			gui.set_size(slidelevel, vmath.vector3(gui.get_position(handle).x + (slider_size.x/2), slider_fillsize.y, slider_fillsize.z))
+			dd[node .. "activeslider"] = true
+		end
+		if dd[node .. "activeslider"] then
 			gui.set_screen_position(handle, vmath.vector3(valuelimit(action.x, slider_fillpos.x, slider_fillpos.x + slider_size.x),handle_start.y, handle_start.z ))
 			gui.set_size(slidelevel, vmath.vector3(gui.get_position(handle).x + (slider_size.x/2), slider_fillsize.y, slider_fillsize.z))
 		end
@@ -84,6 +88,11 @@ function slider(self, action_id, action, node)
 		if action_id == hash("touch") and action.released then
 			dd.activeNode = nil
 		end
+		if not gui.pick_node(bgNode, action.x, action.y) or action.released then
+			dd[node .. "activeslider"] = false
+			dd.activeNode = nil
+		end
+			
 	end
 	return dd[node .. "value"]
 end
