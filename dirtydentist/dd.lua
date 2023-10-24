@@ -71,10 +71,6 @@ function slider(self, action_id, action, node)
 
 	-- if active
 	if dd.activeNode == node or dd[node .. "activeslider"]  then
-		
-		
-		
-
 		if action_id == hash("touch") and gui.pick_node(handle, action.x, action.y) and not action.released then
 			gui.set_screen_position(handle, vmath.vector3(valuelimit(action.x, slider_fillpos.x, slider_fillpos.x + slider_size.x),handle_start.y, handle_start.z ))
 			gui.set_size(slidelevel, vmath.vector3(gui.get_position(handle).x + (slider_size.x/2), slider_fillsize.y, slider_fillsize.z))
@@ -94,8 +90,7 @@ function slider(self, action_id, action, node)
 		if not gui.pick_node(bgNode, action.x, action.y) or action.released then
 			dd[node .. "activeslider"] = false
 			dd.activeNode = nil
-		end
-			
+		end	
 	end
 	dd[node .. "value"] = gui.get_position(handle).x/(slider_size.x/2)
 	return dd[node .. "value"]
@@ -813,6 +808,24 @@ function combobox_interact(self, action_id, action, node, list, enabled)
 	end
 	return dd[selectedValue]
 end
+
+--clear all lines in textbox
+function textbox_clear(node)
+	local lines = node .. "lines"
+	local active = node .. "activeline"
+	dd[active] = 1
+	dd.activeNode = nil
+	pprint(dd[lines])
+	for i = 2, #dd[lines] do
+		deleteLine(node, dd[lines][2].id)
+		table.remove(dd[lines], 2)
+	end
+	sortlines (node, dd[lines])
+	gui.set_text(dd[lines][1].text, "")
+	gui.set_text(dd[lines][1].hidden, "")
+	gui.set_enabled(dd[lines][1].marker, false)
+end
+
 
 -- Multiline inputbox
 function textbox_input(self, action_id, action, node, enabled)	
