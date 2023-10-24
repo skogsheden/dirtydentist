@@ -504,7 +504,7 @@ function dropdown_interact(self, action_id, action, node, list, enabled)
 		end	
 
 		-- If left active area close dropdown
-		if gui.pick_node(gui.get_node(dd.activeNode .. "/safearea"), action.x, action.y) == false and gui.pick_node(gui.get_node(dd.activeNode .. "/dddrag"), action.x, action.y) == false and gui.pick_node(gui.get_node(dd.activeNode .. "/textbox"), action.x, action.y) == false then
+		if gui.pick_node(gui.get_node(dd.activeNode .. "/safearea"), action.x, action.y) == false  and gui.pick_node(gui.get_node(dd.activeNode .. "/textbox"), action.x, action.y) == false then
 			gui.set_enabled(mask, false) 
 			gui.set_text(selected_text, dd[selectedValue])
 			dd[isOpen] = false
@@ -561,6 +561,12 @@ function dropdown_interact(self, action_id, action, node, list, enabled)
 						dd[selectedValue] = gui.get_text(gui.get_node(node .. listOfText[k]))
 						gui.set_text(selected_text, dd[selectedValue])
 						gui.set_color(gui.get_node(node .. listOfButton[k]), colors.select)
+						gui.set_enabled(mask, false)
+						gui.set_text(selected_text, dd[selectedValue])
+						dropdown_del(self, node)
+						dd[init] = false
+						dd[isOpen] = false
+						dd.activeNode = nil
 					end
 				elseif dd[isOpen] and gui.pick_node(gui.get_node(node .. listOfButton[k]), action.x, action.y) and dd[selectedValue] ~= gui.get_text(gui.get_node(node .. listOfText[k])) then
 					gui.set_color(gui.get_node(node .. listOfButton[k]), colors.hover)
@@ -620,7 +626,7 @@ function combobox_interact(self, action_id, action, node, list, enabled)
 		end
 		
 		-- If left active area close dropdown
-		if gui.pick_node(gui.get_node(dd.activeNode .. "/safearea"), action.x, action.y) == false and gui.pick_node(gui.get_node(dd.activeNode .. "/dddrag"), action.x, action.y) == false and gui.pick_node(gui.get_node(dd.activeNode .. "/textbox"), action.x, action.y) == false then
+		if gui.pick_node(gui.get_node(dd.activeNode .. "/safearea"), action.x, action.y) == false and gui.pick_node(gui.get_node(dd.activeNode .. "/textbox"), action.x, action.y) == false then
 			gui.set_enabled(mask, false) 
 			gui.set_text(selected_text, dd[selectedValue])
 			dd[isOpen] = false
@@ -781,6 +787,17 @@ function combobox_interact(self, action_id, action, node, list, enabled)
 						dd[selectedValue] = gui.get_text(gui.get_node(node .. listOfText[k]))
 						gui.set_text(selected_text, dd[selectedValue])
 						gui.set_color(gui.get_node(node .. listOfButton[k]), colors.select)
+
+						-- Close dropdown
+						gui.set_enabled(mask, false) 
+						gui.set_text(selected_text, dd[selectedValue])
+						dd[isOpen] = false
+						dropdown_del(self, node)
+						dd[init] = false
+						dd.activeNode = nil
+						dd[inputActive] = false
+						gui.set_enabled(markerNode, false)
+						gui.set_color(textbox, colors.active)
 					end
 				elseif dd[isOpen] and gui.pick_node(gui.get_node(node .. listOfButton[k]), action.x, action.y) and dd[selectedValue] ~= gui.get_text(gui.get_node(node .. listOfText[k])) then
 					gui.set_color(gui.get_node(node .. listOfButton[k]), colors.hover)
