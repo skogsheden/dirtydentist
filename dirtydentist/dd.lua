@@ -73,16 +73,16 @@ function slider(self, action_id, action, node)
 		widthmod = window.get_size()/1280	
 		if action_id == hash("touch") and gui.pick_node(handle, action.x, action.y) and not action.released then
 			
-			gui.set_screen_position(handle, vmath.vector3(valuelimit(action.x*widthmod, slider_fillpos.x, slider_fillpos.x + slider_size.x),handle_start.y, handle_start.z ))
+			gui.set_screen_position(handle, vmath.vector3(valuelimit(action.x*widthmod, slider_fillpos.x, (slider_fillpos.x + slider_size.x)),handle_start.y, handle_start.z ))
 			gui.set_size(slidelevel, vmath.vector3(gui.get_position(handle).x + (slider_size.x/2), slider_fillsize.y, slider_fillsize.z))
 			dd[node .. "activeslider"] = true
 			end
 			if dd[node .. "activeslider"] then
-				gui.set_screen_position(handle, vmath.vector3(valuelimit(action.x*widthmod, slider_fillpos.x, slider_fillpos.x + slider_size.x),handle_start.y, handle_start.z ))
+				gui.set_screen_position(handle, vmath.vector3(valuelimit(action.x*widthmod, slider_fillpos.x, (slider_fillpos.x + slider_size.x)),handle_start.y, handle_start.z ))
 				gui.set_size(slidelevel, vmath.vector3(gui.get_position(handle).x + (slider_size.x/2), slider_fillsize.y, slider_fillsize.z))
 			end
 			if action_id == hash("touch") and gui.pick_node(slidebg, action.x, action.y) and action.pressed and not gui.pick_node(handle, action.x, action.y) then
-				gui.set_screen_position(handle, vmath.vector3(valuelimit(action.x*widthmod, slider_fillpos.x, slider_fillpos.x + slider_size.x),handle_start.y, handle_start.z ))
+				gui.set_screen_position(handle, vmath.vector3(valuelimit(action.x*widthmod, slider_fillpos.x, (slider_fillpos.x + slider_size.x)),handle_start.y, handle_start.z ))
 				gui.set_size(slidelevel, vmath.vector3(gui.get_position(handle).x + (slider_size.x/2), slider_fillsize.y, slider_fillsize.z))
 			end
 			if action_id == hash("touch") and action.released then
