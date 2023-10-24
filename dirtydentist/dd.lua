@@ -815,15 +815,18 @@ function textbox_clear(node)
 	local active = node .. "activeline"
 	dd[active] = 1
 	dd.activeNode = nil
-	pprint(dd[lines])
-	for i = 2, #dd[lines] do
-		deleteLine(node, dd[lines][2].id)
-		table.remove(dd[lines], 2)
-	end
-	sortlines (node, dd[lines])
-	gui.set_text(dd[lines][1].text, "")
-	gui.set_text(dd[lines][1].hidden, "")
-	gui.set_enabled(dd[lines][1].marker, false)
+	if dd[lines] ~= nil then
+		if #dd[lines] > 1 then
+			for i = 2, #dd[lines] do
+				deleteLine(node, dd[lines][2].id)
+				table.remove(dd[lines], 2)
+			end
+			sortlines (node, dd[lines])
+		end
+		gui.set_text(dd[lines][1].text, "")
+		gui.set_text(dd[lines][1].hidden, "")
+		gui.set_enabled(dd[lines][1].marker, false)
+	end	
 end
 
 
