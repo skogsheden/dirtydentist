@@ -2,7 +2,8 @@ require "dirtydentist.dd"
 
 function init(self)
 	msg.post(".", "acquire_input_focus")
-
+	msg.post("@render:", "use_stretch_projection", { near = -1, far = 1 })
+	
 	localisationofstrings("Ingen hittades", "Välj ett värde")
 	
 	jedilist = {

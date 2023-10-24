@@ -61,32 +61,33 @@ function slider(self, action_id, action, node)
 	local handle_pos = gui.get_position(handle)
 	local handle_start = gui.get_screen_position(handle)
 	
-	-- Check if can be actiavted
 	if dd.activeNode == nil and gui.pick_node(bgNode, action.x, action.y) then
 		dd.activeNode = node
 	end
 	if dd[node .. "value"] == nil then
 		dd[node .. "value"] = 0
 	end
-
+	
 	-- if active
 	if dd.activeNode == node or dd[node .. "activeslider"]  then
+		widthmod = window.get_size()/1280	
 		if action_id == hash("touch") and gui.pick_node(handle, action.x, action.y) and not action.released then
-			gui.set_screen_position(handle, vmath.vector3(valuelimit(action.x, slider_fillpos.x, slider_fillpos.x + slider_size.x),handle_start.y, handle_start.z ))
+			
+			gui.set_screen_position(handle, vmath.vector3(valuelimit(action.x*widthmod, slider_fillpos.x, slider_fillpos.x + slider_size.x),handle_start.y, handle_start.z ))
 			gui.set_size(slidelevel, vmath.vector3(gui.get_position(handle).x + (slider_size.x/2), slider_fillsize.y, slider_fillsize.z))
 			dd[node .. "activeslider"] = true
-		end
-		if dd[node .. "activeslider"] then
-			gui.set_screen_position(handle, vmath.vector3(valuelimit(action.x, slider_fillpos.x, slider_fillpos.x + slider_size.x),handle_start.y, handle_start.z ))
-			gui.set_size(slidelevel, vmath.vector3(gui.get_position(handle).x + (slider_size.x/2), slider_fillsize.y, slider_fillsize.z))
-		end
-		if action_id == hash("touch") and gui.pick_node(slidebg, action.x, action.y) and action.pressed and not gui.pick_node(handle, action.x, action.y) then
-			gui.set_screen_position(handle, vmath.vector3(valuelimit(action.x, slider_fillpos.x, slider_fillpos.x + slider_size.x),handle_start.y, handle_start.z ))
-			gui.set_size(slidelevel, vmath.vector3(gui.get_position(handle).x + (slider_size.x/2), slider_fillsize.y, slider_fillsize.z))
-		end
-		if action_id == hash("touch") and action.released then
-			dd.activeNode = nil
-		end
+			end
+			if dd[node .. "activeslider"] then
+				gui.set_screen_position(handle, vmath.vector3(valuelimit(action.x*widthmod, slider_fillpos.x, slider_fillpos.x + slider_size.x),handle_start.y, handle_start.z ))
+				gui.set_size(slidelevel, vmath.vector3(gui.get_position(handle).x + (slider_size.x/2), slider_fillsize.y, slider_fillsize.z))
+			end
+			if action_id == hash("touch") and gui.pick_node(slidebg, action.x, action.y) and action.pressed and not gui.pick_node(handle, action.x, action.y) then
+				gui.set_screen_position(handle, vmath.vector3(valuelimit(action.x*widthmod, slider_fillpos.x, slider_fillpos.x + slider_size.x),handle_start.y, handle_start.z ))
+				gui.set_size(slidelevel, vmath.vector3(gui.get_position(handle).x + (slider_size.x/2), slider_fillsize.y, slider_fillsize.z))
+			end
+			if action_id == hash("touch") and action.released then
+				dd.activeNode = nil
+			end
 		if not gui.pick_node(bgNode, action.x, action.y) or action.released then
 			dd[node .. "activeslider"] = false
 			dd.activeNode = nil
@@ -236,13 +237,14 @@ function text_input(self, action_id, action, node, enabled)
 		-- Get the other subnodes
 		local hiddenText = gui.get_node(node .. "/hiddentext") -- Hidden text for comparision
 		local markerNode = gui.get_node(node .. "/marker")
-
+		widthmod = window.get_size()/1280	
+		
 		-- If button pressed on textbox
 		if action_id == hash("touch") and action.pressed and gui.pick_node(bgNode, action.x, action.y) then
 			dd[node .. "isActive"] = true -- Activate text input
 			gui.set_enabled(markerNode, true) -- Enable marker
 			gui.set_color(bgNode, colors.hover) -- Set color to hover
-			gui.set_screen_position(markerNode, vmath.vector3(action.x,action.y,0)) -- Set marker at click position
+			gui.set_screen_position(markerNode, vmath.vector3(action.x*widthmod,action.y,0)) -- Set marker at click position
 			markpos = gui.get_position(markerNode) -- Convert to local pos
 			markpos.y=0 -- Set y position to 0 to keep in middle of box
 			gui.set_position(markerNode, markpos) -- Update
@@ -624,6 +626,9 @@ function combobox_interact(self, action_id, action, node, list, enabled)
 			dropdown_crt(self, node, list)
 			dd[init] = true
 		end
+
+		-- Calculate width modifier
+		widthmod = window.get_size()/1280	
 		
 		-- If left active area close dropdown
 		if gui.pick_node(gui.get_node(dd.activeNode .. "/safearea"), action.x, action.y) == false and gui.pick_node(gui.get_node(dd.activeNode .. "/textbox"), action.x, action.y) == false then
@@ -650,7 +655,7 @@ function combobox_interact(self, action_id, action, node, list, enabled)
 			gui.set_text(hiddenText, gui.get_text(selected_text))
 			
 			-- Set marker
-			gui.set_screen_position(markerNode, vmath.vector3(action.x,action.y,0)) 
+			gui.set_screen_position(markerNode, vmath.vector3(action.x*widthmod,action.y,0)) 
 			local markpos = gui.get_position(markerNode)
 			markpos.y = 0 
 
@@ -878,6 +883,8 @@ function textbox_input(self, action_id, action, node, enabled)
 			dd[linescount] = 1
 		end
 
+		widthmod = window.get_size()/1280	
+
 		--Scrolling
 		if action_id == hash("wheelup") and gui.pick_node(bgNode, action.x, action.y) then
 			for i = 1, #dd[lines] do
@@ -902,7 +909,7 @@ function textbox_input(self, action_id, action, node, enabled)
 				
 				dd[input] = true -- Recive text input
 				gui.set_enabled(dd[lines][i].marker, true) -- Enable marker
-				gui.set_screen_position(dd[lines][i].marker, vmath.vector3(action.x,action.y,0)) -- Set marker at click position
+				gui.set_screen_position(dd[lines][i].marker, vmath.vector3(action.x*widthmod,action.y,0)) -- Set marker at click position
 				markpos = gui.get_position(dd[lines][i].marker) -- Convert to local pos
 				markpos.y = -10 -- Set y position to 0 to keep in middle of box
 				gui.set_position(dd[lines][i].marker, markpos) -- Update
@@ -918,7 +925,7 @@ function textbox_input(self, action_id, action, node, enabled)
 				end
 				markpos.x = gui.get_text_metrics_from_node(dd[lines][i].hidden).width -- Update marker to be at the end the hiddenstring
 				gui.set_position(dd[lines][i].marker, markpos)
-			elseif action_id == hash("touch") and action.pressed and not gui.pick_node(bgNode, action.x, action.y) then -- If pressed outside of text box deactivate
+			elseif action_id == hash("touch") and action.pressed and not gui.pick_node(bgNode, action.x*widthmod, action.y) then -- If pressed outside of text box deactivate
 				gui.set_color(bgNode, colors.active)
 				dd[input] = false
 				gui.set_enabled(dd[lines][i].marker, false)

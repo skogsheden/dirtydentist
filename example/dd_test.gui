@@ -6153,7 +6153,7 @@ nodes {
   xanchor: XANCHOR_NONE
   yanchor: YANCHOR_NONE
   pivot: PIVOT_NW
-  adjust_mode: ADJUST_MODE_STRETCH
+  adjust_mode: ADJUST_MODE_FIT
   parent: "box"
   layer: "bg"
   inherit_alpha: true
@@ -6778,5 +6778,5 @@ layers {
   name: "marker"
 }
 material: "/builtins/materials/gui.material"
-adjust_reference: ADJUST_REFERENCE_PARENT
+adjust_reference: ADJUST_REFERENCE_LEGACY
 max_nodes: 1024
