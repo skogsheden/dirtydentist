@@ -809,7 +809,7 @@ function combobox_interact(self, action_id, action, node, list, enabled)
 	return dd[selectedValue]
 end
 
---clear all lines in textbox
+--clear all lines in textbox and reset to zero
 function textbox_clear(node)
 	local lines = node .. "lines"
 	local active = node .. "activeline"
