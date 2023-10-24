@@ -95,7 +95,6 @@ function slider(self, action_id, action, node)
 		end	
 	end
 	dd[node .. "value"] = gui.get_position(handle).x/(slider_size.x/2)
-	pprint(dd[node .. "value"])
 	return dd[node .. "value"]
 end
 
