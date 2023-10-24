@@ -56,6 +56,7 @@ function slider(self, action_id, action, node)
 
 	-- Get size
 	local slider_size = gui.get_size(slidebg)
+	local slider_pos = gui.get_screen_position(slidebg)
 	local slider_fillsize = gui.get_size(slidelevel)
 	local slider_fillpos = gui.get_screen_position(slidelevel)
 	local handle_pos = gui.get_position(handle)
@@ -73,16 +74,16 @@ function slider(self, action_id, action, node)
 		widthmod = window.get_size()/1280	
 		if action_id == hash("touch") and gui.pick_node(handle, action.x, action.y) and not action.released then
 			
-			gui.set_screen_position(handle, vmath.vector3(valuelimit(action.x*widthmod, slider_fillpos.x, (slider_fillpos.x + slider_size.x)),handle_start.y, handle_start.z ))
+			gui.set_screen_position(handle, vmath.vector3(valuelimit(action.x*widthmod, slider_fillpos.x, slider_fillpos.x + 2*(slider_pos.x-slider_fillpos.x)),handle_start.y, handle_start.z ))
 			gui.set_size(slidelevel, vmath.vector3(gui.get_position(handle).x + (slider_size.x/2), slider_fillsize.y, slider_fillsize.z))
 			dd[node .. "activeslider"] = true
 			end
 			if dd[node .. "activeslider"] then
-				gui.set_screen_position(handle, vmath.vector3(valuelimit(action.x*widthmod, slider_fillpos.x, (slider_fillpos.x + slider_size.x)),handle_start.y, handle_start.z ))
+				gui.set_screen_position(handle, vmath.vector3(valuelimit(action.x*widthmod, slider_fillpos.x, slider_fillpos.x + 2*(slider_pos.x-slider_fillpos.x)),handle_start.y, handle_start.z ))
 				gui.set_size(slidelevel, vmath.vector3(gui.get_position(handle).x + (slider_size.x/2), slider_fillsize.y, slider_fillsize.z))
 			end
 			if action_id == hash("touch") and gui.pick_node(slidebg, action.x, action.y) and action.pressed and not gui.pick_node(handle, action.x, action.y) then
-				gui.set_screen_position(handle, vmath.vector3(valuelimit(action.x*widthmod, slider_fillpos.x, (slider_fillpos.x + slider_size.x)),handle_start.y, handle_start.z ))
+				gui.set_screen_position(handle, vmath.vector3(valuelimit(action.x*widthmod, slider_fillpos.x, slider_fillpos.x + 2*(slider_pos.x-slider_fillpos.x)),handle_start.y, handle_start.z ))
 				gui.set_size(slidelevel, vmath.vector3(gui.get_position(handle).x + (slider_size.x/2), slider_fillsize.y, slider_fillsize.z))
 			end
 			if action_id == hash("touch") and action.released then
@@ -94,6 +95,7 @@ function slider(self, action_id, action, node)
 		end	
 	end
 	dd[node .. "value"] = gui.get_position(handle).x/(slider_size.x/2)
+	pprint(dd[node .. "value"])
 	return dd[node .. "value"]
 end
 
@@ -925,7 +927,7 @@ function textbox_input(self, action_id, action, node, enabled)
 				end
 				markpos.x = gui.get_text_metrics_from_node(dd[lines][i].hidden).width -- Update marker to be at the end the hiddenstring
 				gui.set_position(dd[lines][i].marker, markpos)
-			elseif action_id == hash("touch") and action.pressed and not gui.pick_node(bgNode, action.x*widthmod, action.y) then -- If pressed outside of text box deactivate
+			elseif action_id == hash("touch") and action.pressed and not gui.pick_node(bgNode, action.x, action.y) then -- If pressed outside of text box deactivate
 				gui.set_color(bgNode, colors.active)
 				dd[input] = false
 				gui.set_enabled(dd[lines][i].marker, false)
@@ -987,7 +989,6 @@ function textbox_input(self, action_id, action, node, enabled)
 					carrierpos.y = carrierpos.y - 20
 					gui.set_position(carrier, carrierpos)
 				end
-				
 			elseif utf8.len(gui.get_text(dd[lines][dd[active]].hidden)) < utf8.len(gui.get_text(dd[lines][dd[active]].text)) then -- If hidden is shorter remove text from that point
 				local hiddenlength = utf8.len(gui.get_text(dd[lines][dd[active]].hidden))
 				local markerPos = gui.get_position(dd[lines][dd[active]].marker)
