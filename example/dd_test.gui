@@ -6618,7 +6618,7 @@ nodes {
   }
   type: TYPE_BOX
   blend_mode: BLEND_MODE_ALPHA
-  texture: "UI/bg_textbox2"
+  texture: ""
   id: "slider/slider_bg"
   xanchor: XANCHOR_NONE
   yanchor: YANCHOR_NONE
@@ -6677,7 +6677,7 @@ nodes {
   }
   type: TYPE_BOX
   blend_mode: BLEND_MODE_ALPHA
-  texture: "UI/bg_textbox2"
+  texture: ""
   id: "slider/slider_level"
   xanchor: XANCHOR_NONE
   yanchor: YANCHOR_NONE
