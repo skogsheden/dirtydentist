@@ -171,11 +171,12 @@ function checkbox(self, action_id, action, node, enabled)
 				dd[selected] = true
 				gui.play_flipbook(bgNode, "check")
 			end
-		else
+		elseif not gui.pick_node(bgNode, action.x, action.y) then
 			dd.activeNode = nil
 			gui.set_color(bgNode, colors.active)
 		end
 		dd.activeNode = nil
+		gui.set_color(bgNode, colors.active)
 	end
 	--return value
 	return dd[selected]
