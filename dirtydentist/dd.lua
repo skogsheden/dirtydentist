@@ -154,13 +154,15 @@ function checkbox(self, action_id, action, node, enabled)
 	if dd[selected] == nil then
 		dd[selected] = false
 	end
-	
+
 	if dd.activeNode == nil and gui.pick_node(bgNode, action.x, action.y) and enabled then
 		dd.activeNode = node
+	elseif gui.pick_node(bgNode, action.x, action.y) == false and enabled then
+		gui.set_color(bgNode, colors.active)
 	elseif enabled == false then
 		gui.set_color(bgNode, colors.inactive)
 	end
-	
+
 	if dd.activeNode == node then 
 		if gui.pick_node(bgNode, action.x, action.y) then
 			gui.set_color(bgNode, colors.hover)
@@ -170,16 +172,24 @@ function checkbox(self, action_id, action, node, enabled)
 			elseif action_id == hash("touch") and action.pressed and dd[selected] == false then
 				dd[selected] = true
 				gui.play_flipbook(bgNode, "check")
+				gui.set_color(bgNode, colors.active)
 			end
 		elseif not gui.pick_node(bgNode, action.x, action.y) then
 			dd.activeNode = nil
-			gui.set_color(bgNode, colors.active)
 		end
 		dd.activeNode = nil
-		gui.set_color(bgNode, colors.active)
 	end
 	--return value
 	return dd[selected]
+end
+
+function clear_checkbox(node)
+	local bgNode = gui.get_node(node .. "/bg")
+	local selected  = node .. "selected"
+	dd[selected] = false
+	gui.play_flipbook(bgNode, "bg_checkbox")
+	dd.activeNode = nil
+	gui.set_color(bgNode, colors.active)
 end
 
 function button_enabled(self, node, enabled)
