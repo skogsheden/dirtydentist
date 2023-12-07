@@ -861,6 +861,7 @@ function textbox_clear(node)
 		gui.set_text(dd[lines][1].hidden, "")
 		gui.set_enabled(dd[lines][1].marker, false)
 	end	
+	dd[lines] = nil
 end
 
 
