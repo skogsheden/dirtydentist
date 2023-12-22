@@ -278,6 +278,22 @@ function text_input(self, action_id, action, node, enabled)
 			gui.set_color(bgNode, colors.active)
 			dd.activeNode = nil
 		end
+
+		if action_id == hash("left") and action.pressed and utf8.len(gui.get_text(hiddenText)) > 0 and dd[node .. "isActive"] then
+			local shortenstring = utf8.sub(gui.get_text(hiddenText), 1, -2)
+			gui.set_text(hiddenText, shortenstring)
+			local markerPos = gui.get_position(markerNode)
+			markerPos.x = gui.get_text_metrics_from_node(hiddenText).width
+			gui.set_position(markerNode, markerPos)
+		elseif action_id == hash("right") and action.pressed and dd[node .. "isActive"] and utf8.len(gui.get_text(hiddenText)) < utf8.len(gui.get_text(textNode)) then
+			local lengthNew = utf8.len(gui.get_text(hiddenText))
+			local lenDiff = utf8.len(gui.get_text(textNode)) - lengthNew
+			local shortenstring = utf8.sub(gui.get_text(textNode), 1, -lenDiff)
+			gui.set_text(hiddenText, shortenstring)
+			local markerPos = gui.get_position(markerNode)
+			markerPos.x = gui.get_text_metrics_from_node(hiddenText).width
+			gui.set_position(markerNode, markerPos)
+		end
 		
 		if action_id == hash("text") and dd[node .. "isActive"] and gui.get_text_metrics_from_node(textNode).width < (gui.get_size(bgNode).x-25) then
 			if utf8.len(gui.get_text(hiddenText)) < utf8.len(gui.get_text(textNode)) then -- Hidden is shorter add text for that point
@@ -686,7 +702,23 @@ function combobox_interact(self, action_id, action, node, list, enabled)
 			gui.set_color(textbox, colors.active)
 			gui.set_enabled(markerNode, false)
 		end
-
+		
+		if action_id == hash("left") and action.pressed and utf8.len(gui.get_text(hiddenText)) > 0 then
+			local shortenstring = utf8.sub(gui.get_text(hiddenText), 1, -2)
+			gui.set_text(hiddenText, shortenstring)
+			local markerPos = gui.get_position(markerNode)
+			markerPos.x = gui.get_text_metrics_from_node(hiddenText).width*cb_textmag - 90
+			gui.set_position(markerNode, markerPos)
+		elseif action_id == hash("right") and action.pressed and utf8.len(gui.get_text(hiddenText)) < utf8.len(gui.get_text(selected_text)) then
+			local lengthNew = utf8.len(gui.get_text(hiddenText))
+			local lenDiff = utf8.len(gui.get_text(selected_text)) - lengthNew
+			local shortenstring = utf8.sub(gui.get_text(selected_text), 1, -lenDiff)
+			gui.set_text(hiddenText, shortenstring)
+			local markerPos = gui.get_position(markerNode)
+			markerPos.x = gui.get_text_metrics_from_node(hiddenText).width*cb_textmag - 90
+			gui.set_position(markerNode, markerPos)
+		end
+		
 		-- handle input of text
 		if action_id == hash("text") and dd[inputActive] then	
 			dropdown_del(self, node)
@@ -726,7 +758,7 @@ function combobox_interact(self, action_id, action, node, list, enabled)
 			gui.set_enabled(mask, true)
 			dd[isOpen] = true
 		end
-	
+		
 		if action_id == hash("backspace") and action.repeated then
 			dropdown_del(self, node)
 
