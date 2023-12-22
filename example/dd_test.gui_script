@@ -1,5 +1,7 @@
 require "dirtydentist.dd"
 
+local sildervalue = 0
+
 function init(self)
 	msg.post(".", "acquire_input_focus")
 	msg.post("@render:", "use_stretch_projection", { near = -1, far = 1 })
@@ -49,7 +51,8 @@ function init(self)
 end
 
 function on_input(self, action_id, action)
-	slider(self, action_id, action, "slider")
+	sildervalue = slider(self, action_id, action, "slider") * 100
+	gui.set_text(gui.get_node("sildetext"), sildervalue)
 	
 	dropdown_interact(self, action_id, action, "ddEtt",jedilist, true)
 	dropdown_interact(self, action_id, action, "ddTva",{"ett","två"},true)
@@ -66,6 +69,7 @@ function on_input(self, action_id, action)
 
 	if button_touch(self, action_id, action, "buttonEtt", true) then
 		textbox_clear("box")
+		gui.set_text(gui.get_node("buttontext"), "I'm pressed!")
 	end
 
 	checkbox(self, action_id, action, "checkEtt", true)

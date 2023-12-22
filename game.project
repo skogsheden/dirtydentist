@@ -11,7 +11,7 @@ height = 800
 [project]
 title = DirtyDentist
 version = 0.1.1
-publisher = RadUtb
+publisher = Skogsheden
 developer = Nils Gustafsson
 bundle_resources = /dirtydentist/
 dependencies#0 = https://github.com/d954mas/defold-utf8/archive/master.zip
