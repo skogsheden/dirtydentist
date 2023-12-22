@@ -883,6 +883,7 @@ function textbox_input(self, action_id, action, node, enabled)
 		local markerNode = gui.get_node(node .. "/marker")
 		local innerbox = gui.get_node(node .. "/innerbox")
 		local carrier = gui.get_node(node .. "/carrier")
+		local dragpos = gui.get_node(node .. "/dragpos")
 		local linescount = node .. "count"
 		local active = node .. "activeline"
 		local input = node .. "input"
@@ -896,24 +897,111 @@ function textbox_input(self, action_id, action, node, enabled)
 			dd[linescount] = 1
 		end
 
+		if #dd[lines]*20 > gui.get_size(bgNode).y then
+			gui.set_visible(dragpos, true)
+		else
+			gui.set_visible(dragpos, false)
+		end
+
 		widthmod = window.get_size()/1280	
 
 		--Scrolling
 		if action_id == hash("wheelup") and gui.pick_node(bgNode, action.x, action.y) then
 			for i = 1, #dd[lines] do
 				local currentPos = gui.get_position(carrier)
-				currentPos.y =  valuelimit(currentPos.y - scrollspeeed/5, 0, gui.get_size(carrier).y-gui.get_size(bgNode).y)
+				currentPos.y =  valuelimit(currentPos.y - scrollspeeed/5, 0, gui.get_size(carrier).y-gui.get_size(bgNode).y+15)
 				gui.set_position(carrier, currentPos)
 			end
+			local dragPos = gui.get_position(dragpos)
+			local posDelta = -gui.get_position(carrier).y / (gui.get_size(carrier).y - gui.get_size(bgNode).y)
+			dragPos.y = valuelimit(gui.get_size(bgNode).y * posDelta, -gui.get_size(bgNode).y+15, -5)
+			gui.set_position(dragpos, dragPos)
 		elseif action_id == hash("wheeldown") and gui.pick_node(bgNode, action.x, action.y) then
 			for i = 1, #dd[lines] do
 				local currentPos = gui.get_position(carrier)
 				
-				currentPos.y = valuelimit(currentPos.y + scrollspeeed/5, 0, gui.get_size(carrier).y-gui.get_size(bgNode).y)
+				currentPos.y = valuelimit(currentPos.y + scrollspeeed/5, 0, gui.get_size(carrier).y-gui.get_size(bgNode).y+15)
 				gui.set_position(carrier, currentPos)
 			end
+			local dragPos = gui.get_position(dragpos)
+			local posDelta = -gui.get_position(carrier).y / (gui.get_size(carrier).y - gui.get_size(bgNode).y)
+			dragPos.y = valuelimit(gui.get_size(bgNode).y * posDelta, -gui.get_size(bgNode).y+15, -5)
+			gui.set_position(dragpos, dragPos)
 		end
+		--Key movment
+		if action_id == hash("left") and action.pressed and utf8.len(gui.get_text(dd[lines][dd[active]].hidden)) > 0 then
+			local shortenstring = utf8.sub(gui.get_text(dd[lines][dd[active]].hidden), 1, -2)
+			gui.set_text(dd[lines][dd[active]].hidden, shortenstring)
+			local markerPos = gui.get_position(dd[lines][dd[active]].marker)
+			markerPos.x = gui.get_text_metrics_from_node(dd[lines][dd[active]].hidden).width
+			gui.set_position(dd[lines][dd[active]].marker, markerPos)
+		elseif action_id == hash("right") and action.pressed and utf8.len(gui.get_text(dd[lines][dd[active]].hidden)) < utf8.len(gui.get_text(dd[lines][dd[active]].text)) then
+			local lengthNew = utf8.len(gui.get_text(dd[lines][dd[active]].hidden))
+			local lenDiff = utf8.len(gui.get_text(dd[lines][dd[active]].text)) - lengthNew
+			local shortenstring = utf8.sub(gui.get_text(dd[lines][dd[active]].text), 1, -lenDiff)
+			gui.set_text(dd[lines][dd[active]].hidden, shortenstring)
+			local markerPos = gui.get_position(dd[lines][dd[active]].marker)
+			markerPos.x = gui.get_text_metrics_from_node(dd[lines][dd[active]].hidden).width
+			gui.set_position(dd[lines][dd[active]].marker, markerPos)
+		end
+		if action_id == hash("up") and action.pressed and dd[active] > 1 then
+			local lengthstring = utf8.len(gui.get_text(dd[lines][dd[active]].hidden))
+			gui.set_enabled(dd[lines][dd[active]].marker, false)
+			dd[active] = dd[active] - 1
+			gui.set_enabled(dd[lines][dd[active]].marker, true)
+			local lenDiff = utf8.len(gui.get_text(dd[lines][dd[active]].text)) + 1 - lengthstring
+			if lenDiff > 0 then
+				local shortenstring = utf8.sub(gui.get_text(dd[lines][dd[active]].text), 1, -lenDiff)
+				gui.set_text(dd[lines][dd[active]].hidden, shortenstring)
+			else
+				gui.set_text(dd[lines][dd[active]].hidden, gui.get_text(dd[lines][dd[active]].text))
+			end
+			local markerPos = gui.get_position(dd[lines][dd[active]].marker)
+			markerPos.x = gui.get_text_metrics_from_node(dd[lines][dd[active]].hidden).width
+			gui.set_position(dd[lines][dd[active]].marker, markerPos)
 
+			if gui.get_screen_position(dd[lines][dd[active]].innerbox).y > gui.get_screen_position(bgNode).y then
+				local carrierpos = gui.get_position(carrier)
+				carrierpos.y = carrierpos.y - 20
+				gui.set_position(carrier, carrierpos)
+				local dragPos = gui.get_position(dragpos)
+				local posDelta = -gui.get_position(carrier).y / (gui.get_size(carrier).y - gui.get_size(bgNode).y)
+				dragPos.y = valuelimit(gui.get_size(bgNode).y * posDelta, -gui.get_size(bgNode).y+15, -5)
+				gui.set_position(dragpos, dragPos)
+			end
+
+			local dragPos = gui.get_position(dragpos)
+			local posDelta = -gui.get_position(carrier).y / (gui.get_size(carrier).y - gui.get_size(bgNode).y)
+			dragPos.y = valuelimit(gui.get_size(bgNode).y * posDelta, -gui.get_size(bgNode).y+15, -5)
+			gui.set_position(dragpos, dragPos)
+			
+		elseif action_id == hash("down") and action.pressed and dd[active] < #dd[lines] then
+			local lengthstring = utf8.len(gui.get_text(dd[lines][dd[active]].hidden))
+			gui.set_enabled(dd[lines][dd[active]].marker, false)
+			dd[active] = dd[active] + 1
+			gui.set_enabled(dd[lines][dd[active]].marker, true)
+			local lenDiff = utf8.len(gui.get_text(dd[lines][dd[active]].text)) + 1 - lengthstring
+			if lenDiff > 0 then
+				local shortenstring = utf8.sub(gui.get_text(dd[lines][dd[active]].text), 1, -lenDiff)
+				gui.set_text(dd[lines][dd[active]].hidden, shortenstring)
+			else
+				gui.set_text(dd[lines][dd[active]].hidden, gui.get_text(dd[lines][dd[active]].text))
+			end
+			local markerPos = gui.get_position(dd[lines][dd[active]].marker)
+			markerPos.x = gui.get_text_metrics_from_node(dd[lines][dd[active]].hidden).width
+			gui.set_position(dd[lines][dd[active]].marker, markerPos)
+
+			if gui.get_position(dd[lines][dd[active]].innerbox).y < -60 then
+				local carrierpos = gui.get_position(carrier)
+				carrierpos.y = carrierpos.y + 20
+				gui.set_position(carrier, carrierpos)
+			end
+
+			local dragPos = gui.get_position(dragpos)
+			local posDelta = -gui.get_position(carrier).y / (gui.get_size(carrier).y - gui.get_size(bgNode).y)
+			dragPos.y = valuelimit(gui.get_size(bgNode).y * posDelta, -gui.get_size(bgNode).y+15, -5)
+			gui.set_position(dragpos, dragPos)
+		end
 		for i = 1, #dd[lines] do -- Loop through all lines and check which one is active
 			if action_id == hash("touch") and action.pressed and gui.pick_node(dd[lines][i].innerbox, action.x, action.y) then
 				gui.set_enabled(dd[lines][dd[active]].marker, false)
@@ -999,6 +1087,10 @@ function textbox_input(self, action_id, action, node, enabled)
 					local carrierpos = gui.get_position(carrier)
 					carrierpos.y = carrierpos.y - 20
 					gui.set_position(carrier, carrierpos)
+					local dragPos = gui.get_position(dragpos)
+					local posDelta = -gui.get_position(carrier).y / (gui.get_size(carrier).y - gui.get_size(bgNode).y)
+					dragPos.y = valuelimit(gui.get_size(bgNode).y * posDelta, -gui.get_size(bgNode).y+15, -5)
+					gui.set_position(dragpos, dragPos)
 				end
 			elseif utf8.len(gui.get_text(dd[lines][dd[active]].hidden)) < utf8.len(gui.get_text(dd[lines][dd[active]].text)) then -- If hidden is shorter remove text from that point
 				local hiddenlength = utf8.len(gui.get_text(dd[lines][dd[active]].hidden))
@@ -1057,6 +1149,10 @@ function textbox_input(self, action_id, action, node, enabled)
 					carrierpos.y = carrierpos.y + 20
 					gui.set_position(carrier, carrierpos)
 				end
+				local dragPos = gui.get_position(dragpos)
+				local posDelta = -gui.get_position(carrier).y / (gui.get_size(carrier).y - gui.get_size(bgNode).y)
+				dragPos.y = valuelimit(gui.get_size(bgNode).y * posDelta, -gui.get_size(bgNode).y+15, -5)
+				gui.set_position(dragpos, dragPos)
 			elseif utf8.len(gui.get_text(dd[lines][dd[active]].hidden)) == utf8.len(gui.get_text(dd[lines][dd[active]].text)) and dd[active] <= #dd[lines] then -- If marker at end there is nothing to delete
 				gui.set_enabled(dd[lines][dd[active]].marker, false)
 				dd[linescount] = dd[linescount] + 1
@@ -1075,6 +1171,10 @@ function textbox_input(self, action_id, action, node, enabled)
 					carrierpos.y = carrierpos.y + 20
 					gui.set_position(carrier, carrierpos)
 				end
+				local dragPos = gui.get_position(dragpos)
+				local posDelta = -gui.get_position(carrier).y / (gui.get_size(carrier).y - gui.get_size(bgNode).y)
+				dragPos.y = valuelimit(gui.get_size(bgNode).y * posDelta, -gui.get_size(bgNode).y+15, -5)
+				gui.set_position(dragpos, dragPos)
 			end
 		end
 	end
@@ -1138,7 +1238,7 @@ function sortlines (node, list)
 
 	local carrier = gui.get_node(node .. "/carrier")
 	carries_size = gui.get_size(carrier)
-	carries_size.y = #list*30
+	carries_size.y = #list*20
 	gui.set_size(carrier, carries_size)
 end
 	
