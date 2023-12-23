@@ -1,4 +1,4 @@
 # dirtydentist
-A simple GUI library for Defold developed for educational software in a dentistry program after migration from Unity. It covers essentials like drop-down menus, buttons, checkboxes, radio buttons, and text fields. Notably, the text components allow for mid-string editing.
+A basic GUI library for Defold developed for educational softwares. It covers the essentials including; drop-downs, comboboxes, simple buttons, checkboxes, radio buttons, text fields and text boxes. Notably, the text components allow for mid-string editing and navigation using arrow keys.
 
-Dev branch
+[HTML5 Example](https://skogsheden.se/dirtydentist)
