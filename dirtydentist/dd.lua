@@ -582,7 +582,59 @@ function dropdown_interact(self, action_id, action, node, list, enabled)
 			dragposCurrent.y = -190 * amountcomplete
 			gui.set_position(dragpos, dragposCurrent)
 		end
-		
+
+		-- find if any is selected
+		dd[prevPos] = nil
+		for k in pairs (listOfButton) do
+			if gui.get_color(gui.get_node(node .. listOfButton[k])) == colors.hover then
+				dd[prevPos] = k
+				break
+			end
+		end	
+		if dd[prevPos] == nil then
+			for k in pairs (listOfButton) do
+				if gui.get_color(gui.get_node(node .. listOfButton[k])) == colors.select then
+					dd[prevPos] = k
+					break
+				end
+			end
+			if dd[prevPos] == nil then
+				dd[prevPos] = 1
+				gui.set_color(gui.get_node(node .. listOfButton[dd[prevPos]]), colors.hover)
+			end
+		end
+		-- Move with keys
+		if action_id == hash("up") and action.pressed and dd[count] >= 1 and dd[prevPos] > 1 and dd[isOpen] then
+			gui.set_color(gui.get_node(node .. listOfButton[dd[prevPos]-1]), colors.hover)
+			gui.set_color(gui.get_node(node .. listOfButton[dd[prevPos]]), colors.active)
+			if dd[count] > 7 then
+				gui.set_position(dd_obj, vmath.vector3(0,(dd[prevPos]-1)*30-30,0))
+			end
+		elseif action_id == hash("down") and action.pressed and dd[count] >= 1 and dd[prevPos] < #listOfButton and dd[isOpen] then
+			gui.set_color(gui.get_node(node .. listOfButton[dd[prevPos]+1]), colors.hover)
+			gui.set_color(gui.get_node(node .. listOfButton[dd[prevPos]]), colors.active)
+			if dd[count] > 7 then
+				gui.set_position(dd_obj, vmath.vector3(0,(dd[prevPos]+1)*30-30,0))
+			end
+		end
+		--Select hovered button
+		if action_id == hash("enter") and action.pressed then
+			for k in pairs (listOfButton) do
+				if gui.get_color(gui.get_node(node .. listOfButton[k])) == colors.hover then
+					dd[selectedValue] = gui.get_text(gui.get_node(node .. listOfText[k]))
+					gui.set_text(selected_text, dd[selectedValue])
+					gui.set_color(gui.get_node(node .. listOfButton[k]), colors.select)
+
+					-- Close dropdown
+					gui.set_enabled(mask, false) 
+					gui.set_text(selected_text, dd[selectedValue])
+					dd[isOpen] = false
+					dropdown_del(self, node)
+					dd[init] = false
+					dd.activeNode = nil
+				end
+			end	
+		end
 		-- Check if value pressed
 		if gui.pick_node(mask, action.x, action.y) then
 			for k in pairs (listOfButton) do
@@ -827,7 +879,62 @@ function combobox_interact(self, action_id, action, node, list, enabled)
 			listOfButton[i+1] = "/button" .. i
 			listOfText[i+1] = "/text" .. i
 		end	
-		
+
+		-- find if any is selected
+		dd[prevPos] = nil
+		for k in pairs (listOfButton) do
+			if gui.get_color(gui.get_node(node .. listOfButton[k])) == colors.hover then
+				dd[prevPos] = k
+				break
+			end
+		end	
+		if dd[prevPos] == nil then
+			for k in pairs (listOfButton) do
+				if gui.get_color(gui.get_node(node .. listOfButton[k])) == colors.select then
+					dd[prevPos] = k
+					break
+				end
+			end
+			if dd[prevPos] == nil then
+				dd[prevPos] = 1
+				gui.set_color(gui.get_node(node .. listOfButton[dd[prevPos]]), colors.hover)
+			end
+		end
+		-- Move with keys
+		if action_id == hash("up") and action.pressed and dd[count] > 1 and dd[prevPos] > 1 and dd[isOpen] then
+			gui.set_color(gui.get_node(node .. listOfButton[dd[prevPos]-1]), colors.hover)
+			gui.set_color(gui.get_node(node .. listOfButton[dd[prevPos]]), colors.active)
+			if dd[count] > 7 then
+				gui.set_position(dd_obj, vmath.vector3(0,(dd[prevPos]-1)*30-30,0))
+			end
+		elseif action_id == hash("down") and action.pressed and dd[count] > 1 and dd[prevPos] < #listOfButton and dd[isOpen] then
+			gui.set_color(gui.get_node(node .. listOfButton[dd[prevPos]+1]), colors.hover)
+			gui.set_color(gui.get_node(node .. listOfButton[dd[prevPos]]), colors.active)
+			if dd[count] > 7 then
+				gui.set_position(dd_obj, vmath.vector3(0,(dd[prevPos]+1)*30-30,0))
+			end
+		end
+		--Select hovered button
+		if action_id == hash("enter") and action.pressed then
+			for k in pairs (listOfButton) do
+				if gui.get_color(gui.get_node(node .. listOfButton[k])) == colors.hover then
+					dd[selectedValue] = gui.get_text(gui.get_node(node .. listOfText[k]))
+					gui.set_text(selected_text, dd[selectedValue])
+					gui.set_color(gui.get_node(node .. listOfButton[k]), colors.select)
+
+					-- Close dropdown
+					gui.set_enabled(mask, false) 
+					gui.set_text(selected_text, dd[selectedValue])
+					dd[isOpen] = false
+					dropdown_del(self, node)
+					dd[init] = false
+					dd.activeNode = nil
+					dd[inputActive] = false
+					gui.set_enabled(markerNode, false)
+					gui.set_color(textbox, colors.active)
+				end
+			end	
+		end
 		-- Check if value pressed
 		if gui.pick_node(mask, action.x, action.y) then
 			for k in pairs (listOfButton) do
