@@ -1015,17 +1015,23 @@ function textbox_input(self, action_id, action, node, enabled)
 	end
 	local lines = node .. "lines"
 	
+	
 	-- Recieve input
 	if dd.activeNode == node then
 		local textNode = gui.get_node(node .. "/text")
 		local hiddenText = gui.get_node(node .. "/hiddentext")
 		local markerNode = gui.get_node(node .. "/marker")
 		local innerbox = gui.get_node(node .. "/innerbox")
-		local carrier = gui.get_node(node .. "/carrier")
-		local dragpos = gui.get_node(node .. "/dragpos")
 		local linescount = node .. "count"
 		local active = node .. "activeline"
 		local input = node .. "input"
+		local dragpos = gui.get_node(node .. "/dragpos")
+		local carrier = gui.get_node(node .. "/carrier")
+
+		-- Fix pos of dragmarker if size changed
+		local dragposx = gui.get_position(dragpos)
+		dragposx.x = gui.get_size(carrier).x - 2
+		gui.set_position(dragpos, dragposx)
 
 		 -- Store all created lines
 		
