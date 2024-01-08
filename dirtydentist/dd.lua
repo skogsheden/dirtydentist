@@ -1030,7 +1030,7 @@ function textbox_input(self, action_id, action, node, enabled)
 
 		-- Fix pos of dragmarker if size changed
 		local dragposx = gui.get_position(dragpos)
-		dragposx.x = gui.get_size(carrier).x - 2
+		dragposx.x = gui.get_size(carrier).x - 5
 		gui.set_position(dragpos, dragposx)
 
 		 -- Store all created lines
