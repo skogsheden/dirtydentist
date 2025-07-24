@@ -44,7 +44,7 @@ end
 
 
 function M.checkbox(self, action_id, action, node, enabled, standard_value, text)
-	if action.x ~= nil then
+	if action ~= nil and action.x ~= nil then
 		D.currentMousePos.x = action.x
 		D.currentMousePos.y = action.y
 	end

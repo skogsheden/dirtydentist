@@ -67,7 +67,7 @@ function M.setTextblock(self, node, text)
 end
 
 function M.textBlock(self, action_id, action, node, enabled)
-	if action.x ~= nil then
+	if action ~= nil and action.x ~= nil then
 		D.currentMousePos.x = action.x
 		D.currentMousePos.y = action.y
 	end

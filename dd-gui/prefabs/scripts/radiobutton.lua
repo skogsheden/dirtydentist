@@ -4,7 +4,7 @@
 local M = {}
 
 function M.radiobutton(self, action_id, action, node, enabled, group)
-	if action.x ~= nil then
+	if action ~= nil and action.x ~= nil then
 		D.currentMousePos.x = action.x
 		D.currentMousePos.y = action.y
 	end

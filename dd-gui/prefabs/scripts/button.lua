@@ -15,7 +15,7 @@ function M.toggleActive(self, node, enabled)
 end
 
 function M.togglebutton(self, action_id, action, node, enabled, text)
-	if action.x ~= nil then
+	if action ~= nil and action.x ~= nil then
 		D.currentMousePos.x = action.x
 		D.currentMousePos.y = action.y
 	end
@@ -61,7 +61,7 @@ function M.togglebutton(self, action_id, action, node, enabled, text)
 end
 
 function M.button(self, action_id, action, node, enabled, accent, text)
-	if action.x ~= nil then
+	if action ~= nil and action.x ~= nil then
 		D.currentMousePos.x = action.x
 		D.currentMousePos.y = action.y
 	end

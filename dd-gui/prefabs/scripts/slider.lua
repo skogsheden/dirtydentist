@@ -54,7 +54,7 @@ end
 
 
 function M.slider(self, action_id, action, node, enabled, showpopup, min, max)
-	if action.x ~= nil then
+	if action ~= nil and action.x ~= nil then
 		D.currentMousePos.x = action.x
 		D.currentMousePos.y = action.y
 	end

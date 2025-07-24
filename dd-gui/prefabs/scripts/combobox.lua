@@ -157,7 +157,7 @@ function M.createComboboxList(self, node, list, use_mag)
 end
 
 function M.combobox(self, action_id, action, node, list, enabled, up, use_mag, standardValue)
-	if action.x ~= nil then
+	if action ~= nil and action.x ~= nil then
 		D.currentMousePos.x = action.x
 		D.currentMousePos.y = action.y
 	end
@@ -416,7 +416,7 @@ function M.combobox(self, action_id, action, node, list, enabled, up, use_mag, s
 end
 
 function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use_mag, id, tab_to)
-	if action.x ~= nil then
+	if action ~= nil and action.x ~= nil then
 		D.currentMousePos.x = action.x
 		D.currentMousePos.y = action.y
 	end

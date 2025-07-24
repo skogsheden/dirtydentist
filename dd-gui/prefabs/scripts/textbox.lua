@@ -47,7 +47,7 @@ end
 
 -- Main function for textbox
 function M.textbox(self, action_id, action, node, enabled, tab_to)
-	if action.x ~= nil then
+	if action ~= nil and action.x ~= nil then
 		D.currentMousePos.x = action.x
 		D.currentMousePos.y = action.y
 	end
@@ -325,7 +325,7 @@ end
 
 -- Main function for textbox multiline
 function M.textboxMultiline(self, action_id, action, node, enabled, tab_to)
-	if action.x ~= nil then
+	if action ~= nil and action.x ~= nil then
 		D.currentMousePos.x = action.x
 		D.currentMousePos.y = action.y
 	end
