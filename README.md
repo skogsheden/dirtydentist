@@ -28,6 +28,10 @@ Since rebuild in 0.3.0 functions and implementations have changed but old codeba
 
 - Fix breaking change in action from Defold
 
+**0.3.3:**
+
+- Bugfix
+
 ## Implementation
 
 Use included prefabs and name after hearts content. Implement in GUI script under function on_input(self, action_id, action) as described below if not else specified. 
