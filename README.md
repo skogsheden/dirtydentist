@@ -24,6 +24,10 @@ Since rebuild in 0.3.0 functions and implementations have changed but old codeba
 - Added animations to markers
 - Bugfixes
 
+**0.3.2:**
+
+- Fix breaking change in action from Defold
+
 ## Implementation
 
 Use included prefabs and name after hearts content. Implement in GUI script under function on_input(self, action_id, action) as described below if not else specified. 

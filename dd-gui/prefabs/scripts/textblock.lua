@@ -67,6 +67,11 @@ function M.setTextblock(self, node, text)
 end
 
 function M.textBlock(self, action_id, action, node, enabled)
+	if action.x ~= nil then
+		D.currentMousePos.x = action.x
+		D.currentMousePos.y = action.y
+	end
+	
 	-- Load nodes
 	local bgNode = gui.get_node(node .. "/bg")
 	local carrier = gui.get_node(node .. "/carrier")
@@ -82,10 +87,10 @@ function M.textBlock(self, action_id, action, node, enabled)
 	self.textboxData[node].active = enabled 
 
 	-- Hovering and enabled
-	if gui.pick_node(bgNode, action.x, action.y) and self.textboxData[node].active and D.nodes["active"] == nil then
+	if gui.pick_node(bgNode, D.currentMousePos.x, D.currentMousePos.y) and self.textboxData[node].active and D.nodes["active"] == nil then
 		gui.set_color(bgNode, D.colors.active)
 		D.nodes["active"] = node
-	elseif not self.textboxData[node].scroll.active and not gui.pick_node(bgNode, action.x, action.y) and self.textboxData[node].active and D.nodes["active"] == node then
+	elseif not self.textboxData[node].scroll.active and not gui.pick_node(bgNode, D.currentMousePos.x, D.currentMousePos.y) and self.textboxData[node].active and D.nodes["active"] == node then
 		gui.set_color(bgNode, D.colors.active)
 		D.nodes["active"] = nil
 	elseif not self.textboxData[node].active then
@@ -99,11 +104,11 @@ function M.textBlock(self, action_id, action, node, enabled)
 		-- Handle mouse input
 		if action_id == hash("touch") and action.pressed then
 			self.textboxData[node].scroll.active = true
-			self.textboxData[node].scroll.pos = vmath.vector3(action.x, action.y, 0)
+			self.textboxData[node].scroll.pos = vmath.vector3(D.currentMousePos.x, D.currentMousePos.y, 0)
 		elseif action_id == hash("touch") and action.released then
 			self.textboxData[node].scroll.active = false
 			-- Reset if outside node
-			if not gui.pick_node(bgNode, action.x, action.y) then
+			if not gui.pick_node(bgNode, D.currentMousePos.x, D.currentMousePos.y) then
 				gui.set_color(bgNode, D.colors.active)
 				D.nodes["active"] = nil
 			end
@@ -112,14 +117,14 @@ function M.textBlock(self, action_id, action, node, enabled)
 		if  (gui.get_size(carrier).y - gui.get_size(bgNode).y) > 0 then 
 			if self.textboxData[node].scroll.active then
 				local currentPos = gui.get_position(carrier)
-				self.textboxData[node].scroll.delta = self.textboxData[node].scroll.pos - vmath.vector3(action.x, action.y, 0)
-				self.textboxData[node].scroll.pos = vmath.vector3(action.x, action.y, 0)
+				self.textboxData[node].scroll.delta = self.textboxData[node].scroll.pos - vmath.vector3(D.currentMousePos.x, D.currentMousePos.y, 0)
+				self.textboxData[node].scroll.pos = vmath.vector3(D.currentMousePos.x, D.currentMousePos.y, 0)
 				currentPos.y =  D.valuelimit(currentPos.y - self.textboxData[node].scroll.delta.y, 0, gui.get_size(carrier).y-gui.get_size(bgNode).y)
 				gui.set_position(carrier, currentPos)
 				scrollTextblock(dragpos, carrier, bgNode, nil)
-			elseif action_id == hash("wheelup") and gui.pick_node(bgNode, action.x, action.y) then
+			elseif action_id == hash("wheelup") and gui.pick_node(bgNode, D.currentMousePos.x, D.currentMousePos.y) then
 				scrollTextblock(dragpos, carrier, bgNode, -D.scrollSpeed)
-			elseif action_id == hash("wheeldown") and gui.pick_node(bgNode, action.x, action.y) then
+			elseif action_id == hash("wheeldown") and gui.pick_node(bgNode, D.currentMousePos.x, D.currentMousePos.y) then
 				scrollTextblock(dragpos, carrier, bgNode, D.scrollSpeed)
 			end
 		end

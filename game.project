@@ -14,7 +14,7 @@ high_dpi = 1
 
 [project]
 title = DD-GUI
-version = 0.3.1
+version = 0.3.2
 publisher = Skogsheden
 developer = Nils Gustafsson
 bundle_resources = /dd-gui/

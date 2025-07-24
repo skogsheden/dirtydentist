@@ -47,6 +47,11 @@ end
 
 -- Main function for textbox
 function M.textbox(self, action_id, action, node, enabled, tab_to)
+	if action.x ~= nil then
+		D.currentMousePos.x = action.x
+		D.currentMousePos.y = action.y
+	end
+	
 	-- Load nodes
 	local bgNode = gui.get_node(node .. "/bg")
 	local textNode = gui.get_node(node .. "/text")
@@ -63,9 +68,9 @@ function M.textbox(self, action_id, action, node, enabled, tab_to)
 	D.nodes["tab"] = D.nodes["tab"] or false
 	gui.set_text(textNode, self.textboxData[node].text)
 
-	if gui.pick_node(bgNode, action.x, action.y) and self.textboxData[node].enabled then
+	if gui.pick_node(bgNode, D.currentMousePos.x, D.currentMousePos.y) and self.textboxData[node].enabled then
 		gui.set_color(bgNode, D.colors.hover)
-		if action_id == hash("touch") and action.pressed and gui.pick_node(bgNode, action.x, action.y) and D.nodes["active"] == nil then
+		if action_id == hash("touch") and action.pressed and gui.pick_node(bgNode, D.currentMousePos.x, D.currentMousePos.y) and D.nodes["active"] == nil then
 			D.nodes["active"] = node
 			D.nodes["tab"] = false
 			if D.isMobileDevice then
@@ -73,7 +78,7 @@ function M.textbox(self, action_id, action, node, enabled, tab_to)
 			end
 			D.pulsate(markerNode)
 		end
-	elseif not gui.pick_node(bgNode, action.x, action.y) and self.textboxData[node].enabled and D.nodes["active"] == node then
+	elseif not gui.pick_node(bgNode, D.currentMousePos.x, D.currentMousePos.y) and self.textboxData[node].enabled and D.nodes["active"] == node then
 		gui.set_color(bgNode, D.colors.hover)
 		if action_id == hash("touch") and action.pressed then
 			D.nodes["active"] = nil
@@ -85,7 +90,7 @@ function M.textbox(self, action_id, action, node, enabled, tab_to)
 				gui.hide_keyboard()
 			end
 		end
-	elseif not gui.pick_node(bgNode, action.x, action.y) and self.textboxData[node].enabled and D.nodes["active"] ~= node then
+	elseif not gui.pick_node(bgNode, D.currentMousePos.x, D.currentMousePos.y) and self.textboxData[node].enabled and D.nodes["active"] ~= node then
 		gui.set_color(bgNode, D.colors.active)
 	elseif not self.textboxData[node].enabled then
 		gui.set_color(bgNode, D.colors.inactive)
@@ -320,6 +325,11 @@ end
 
 -- Main function for textbox multiline
 function M.textboxMultiline(self, action_id, action, node, enabled, tab_to)
+	if action.x ~= nil then
+		D.currentMousePos.x = action.x
+		D.currentMousePos.y = action.y
+	end
+	
 	-- Load nodes
 	local bgNode = gui.get_node(node .. "/bg")
 	local textNode = gui.get_node(node .. "/text")
@@ -341,16 +351,16 @@ function M.textboxMultiline(self, action_id, action, node, enabled, tab_to)
 
 	sizeFix(self, node)
 
-	if gui.pick_node(bgNode, action.x, action.y) and enabled then
+	if gui.pick_node(bgNode, D.currentMousePos.x, D.currentMousePos.y) and enabled then
 		gui.set_color(bgNode, D.colors.hover)
-		if action_id == hash("touch") and action.pressed and gui.pick_node(bgNode, action.x, action.y) and (D.nodes["active"] == nil or D.nodes["active"] == node) then
+		if action_id == hash("touch") and action.pressed and gui.pick_node(bgNode, D.currentMousePos.x, D.currentMousePos.y) and (D.nodes["active"] == nil or D.nodes["active"] == node) then
 			D.nodes["active"], self.selectedNode = node, node
 			D.nodes["tab"] = false
 			if D.isMobileDevice then
 				gui.show_keyboard(gui.KEYBOARD_TYPE_DEFAULT, true)
 			end
 		end
-	elseif not gui.pick_node(bgNode, action.x, action.y) and self.textboxData[node].enabled and D.nodes["active"] == node then
+	elseif not gui.pick_node(bgNode, D.currentMousePos.x, D.currentMousePos.y) and self.textboxData[node].enabled and D.nodes["active"] == node then
 		gui.set_color(bgNode, D.colors.hover)
 		if action_id == hash("touch") and action.pressed then
 			D.nodes["active"], self.selectedNode = nil, nil
@@ -362,7 +372,7 @@ function M.textboxMultiline(self, action_id, action, node, enabled, tab_to)
 			end
 		end
 		-- if not active an not hoverd
-	elseif not gui.pick_node(bgNode, action.x, action.y) and self.textboxData[node].enabled then
+	elseif not gui.pick_node(bgNode, D.currentMousePos.x, D.currentMousePos.y) and self.textboxData[node].enabled then
 		gui.set_color(bgNode, D.colors.active)
 		-- disabled
 	elseif not self.textboxData[node].enabled then

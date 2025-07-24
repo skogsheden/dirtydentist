@@ -157,6 +157,11 @@ function M.createComboboxList(self, node, list, use_mag)
 end
 
 function M.combobox(self, action_id, action, node, list, enabled, up, use_mag, standardValue)
+	if action.x ~= nil then
+		D.currentMousePos.x = action.x
+		D.currentMousePos.y = action.y
+	end
+	
 	local textbox = gui.get_node(node .. "/textbox")
 	local selected_text = gui.get_node(node .. "/selecttext")
 	local mask = gui.get_node(node .. "/bg")
@@ -219,15 +224,15 @@ function M.combobox(self, action_id, action, node, list, enabled, up, use_mag, s
 	
 	-- Hovering and enabled
 	if action ~= nil then
-		if gui.pick_node(textbox, action.x, action.y) and enabled then
+		if gui.pick_node(textbox, D.currentMousePos.x, D.currentMousePos.y) and enabled then
 			gui.set_color(textbox, D.colors.hover)
 			if action_id == hash("touch") and action.pressed then
-				if gui.pick_node(textbox, action.x, action.y) and not self.comboboxData[node].open and self.selectedNode == nil then
+				if gui.pick_node(textbox, D.currentMousePos.x, D.currentMousePos.y) and not self.comboboxData[node].open and self.selectedNode == nil then
 					D.nodes["active"], self.selectedNode = node, node
 					gui.set_enabled(mask, true)
 					gui.set_text(selected_text, self.comboboxData[node].value)
 					self.comboboxData[node].open = true
-				elseif gui.pick_node(textbox, action.x, action.y) and self.comboboxData[node].open then
+				elseif gui.pick_node(textbox, D.currentMousePos.x, D.currentMousePos.y) and self.comboboxData[node].open then
 					-- Close dropdown
 					gui.set_color(textbox, D.colors.active)
 					gui.set_enabled(mask, false)
@@ -238,7 +243,7 @@ function M.combobox(self, action_id, action, node, list, enabled, up, use_mag, s
 					D.nodes["active"], self.selectedNode = nil, nil
 				end
 			end
-		elseif not (gui.pick_node(mask, action.x, action.y) or gui.pick_node(textbox, action.x, action.y)) and enabled and self.selectedNode == node then
+		elseif not (gui.pick_node(mask, D.currentMousePos.x, D.currentMousePos.y) or gui.pick_node(textbox, D.currentMousePos.x, D.currentMousePos.y)) and enabled and self.selectedNode == node then
 			if action_id == hash("touch") and action.pressed then
 				gui.set_color(textbox, D.colors.active)
 				gui.set_enabled(mask, false)
@@ -411,6 +416,11 @@ function M.combobox(self, action_id, action, node, list, enabled, up, use_mag, s
 end
 
 function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use_mag, id, tab_to)
+	if action.x ~= nil then
+		D.currentMousePos.x = action.x
+		D.currentMousePos.y = action.y
+	end
+	
 	local textbox = gui.get_node(node .. "/textbox")
 	local selected_text = gui.get_node(node .. "/selecttext")
 	local mask = gui.get_node(node .. "/bg")
@@ -480,10 +490,10 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 
 	-- Hovering and enabled
 	if action ~= nil then
-		if gui.pick_node(textbox, action.x, action.y) and enabled then
+		if gui.pick_node(textbox, D.currentMousePos.x, D.currentMousePos.y) and enabled then
 			gui.set_color(textbox, D.colors.hover)
 			if action_id == hash("touch") and action.pressed then
-				if gui.pick_node(textbox, action.x, action.y) and not self.comboboxData[node].open and self.selectedNode == nil then
+				if gui.pick_node(textbox, D.currentMousePos.x, D.currentMousePos.y) and not self.comboboxData[node].open and self.selectedNode == nil then
 					D.nodes["active"], self.selectedNode = node, node
 					gui.set_enabled(mask, true)
 					gui.set_text(selected_text, self.comboboxData[node].value)
@@ -492,7 +502,7 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 					if D.isMobileDevice then
 						gui.show_keyboard(gui.KEYBOARD_TYPE_DEFAULT, true)
 					end
-				elseif gui.pick_node(arrow, action.x, action.y) and self.comboboxData[node].open then
+				elseif gui.pick_node(arrow, D.currentMousePos.x, D.currentMousePos.y) and self.comboboxData[node].open then
 					-- Close dropdown
 					gui.set_color(textbox, D.colors.active)
 					gui.set_enabled(mask, false)
@@ -509,7 +519,7 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 					end
 				end
 			end
-		elseif not (gui.pick_node(mask, action.x, action.y) or gui.pick_node(textbox, action.x, action.y)) and enabled and self.selectedNode == node then
+		elseif not (gui.pick_node(mask, D.currentMousePos.x, D.currentMousePos.y) or gui.pick_node(textbox, D.currentMousePos.x, D.currentMousePos.y)) and enabled and self.selectedNode == node then
 			if action_id == hash("touch") and action.pressed then
 				gui.set_color(textbox, D.colors.active)
 				gui.set_enabled(mask, false)
@@ -861,9 +871,9 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 			end	
 		end
 		-- Check if value pressed
-		if gui.pick_node(mask, action.x, action.y) then
+		if gui.pick_node(mask, D.currentMousePos.x, D.currentMousePos.y) then
 			for k in pairs (listOfButton) do
-				if action_id == hash("touch") and action.released and self.comboboxData[node].open and gui.pick_node(gui.get_node(node .. listOfButton[k]), action.x, action.y) then
+				if action_id == hash("touch") and action.released and self.comboboxData[node].open and gui.pick_node(gui.get_node(node .. listOfButton[k]), D.currentMousePos.x, D.currentMousePos.y) then
 					if gui.get_text(gui.get_node(node .. listOfText[k])) ~= D.noentries then
 						self.comboboxData[node].value = gui.get_text(gui.get_node(node .. listOfText[k]))
 						gui.set_text(selected_text, self.comboboxData[node].value)
@@ -878,12 +888,12 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 						gui.set_enabled(markerNode, false)
 						break
 					end
-				elseif self.comboboxData[node].open and gui.pick_node(gui.get_node(node .. listOfButton[k]), action.x, action.y) and self.comboboxData[node].value ~= gui.get_text(gui.get_node(node .. listOfText[k])) then
+				elseif self.comboboxData[node].open and gui.pick_node(gui.get_node(node .. listOfButton[k]), D.currentMousePos.x, D.currentMousePos.y) and self.comboboxData[node].value ~= gui.get_text(gui.get_node(node .. listOfText[k])) then
 					gui.set_color(gui.get_node(node .. listOfButton[k]), D.colors.hover)
-				elseif self.comboboxData[node].open and gui.pick_node(gui.get_node(node .. listOfButton[k]), action.x, action.y) and self.comboboxData[node].value == gui.get_text(gui.get_node(node .. listOfText[k])) then
+				elseif self.comboboxData[node].open and gui.pick_node(gui.get_node(node .. listOfButton[k]), D.currentMousePos.x, D.currentMousePos.y) and self.comboboxData[node].value == gui.get_text(gui.get_node(node .. listOfText[k])) then
 					gui.set_color(gui.get_node(node .. listOfButton[k]), D.colors.select)
 					gui.set_scale(gui.get_node(node .. listOfSelect[k]), vmath.vector3(1,0.75,1))
-				elseif self.comboboxData[node].open and not gui.pick_node(gui.get_node(node .. listOfButton[k]), action.x, action.y) and self.comboboxData[node].value == gui.get_text(gui.get_node(node .. listOfText[k])) then
+				elseif self.comboboxData[node].open and not gui.pick_node(gui.get_node(node .. listOfButton[k]), D.currentMousePos.x, D.currentMousePos.y) and self.comboboxData[node].value == gui.get_text(gui.get_node(node .. listOfText[k])) then
 					gui.set_color(gui.get_node(node .. listOfButton[k]), D.colors.hover)
 					gui.set_scale(gui.get_node(node .. listOfSelect[k]), vmath.vector3(1,1,1))
 				elseif self.comboboxData[node].value ~= gui.get_text(gui.get_node(node .. listOfText[k])) and self.comboboxData[node].open then

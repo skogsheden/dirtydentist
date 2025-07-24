@@ -44,6 +44,11 @@ end
 
 
 function M.checkbox(self, action_id, action, node, enabled, standard_value, text)
+	if action.x ~= nil then
+		D.currentMousePos.x = action.x
+		D.currentMousePos.y = action.y
+	end
+	
 	-- Load nodes
 	local bgNode = gui.get_node(node .. "/bg")
 	local checkNode = gui.get_node(node .. "/check")
@@ -86,7 +91,7 @@ function M.checkbox(self, action_id, action, node, enabled, standard_value, text
 	end
 
 	-- Check if hovering above
-	if gui.pick_node(bgNode, action.x, action.y) and enabled and (D.nodes["active"]== nil or D.nodes["active"] == node) then
+	if gui.pick_node(bgNode, D.currentMousePos.x, D.currentMousePos.y) and enabled and (D.nodes["active"]== nil or D.nodes["active"] == node) then
 		-- Set as active node
 		D.nodes["active"] = node
 		if self.checkbox[node].value then
@@ -112,7 +117,7 @@ function M.checkbox(self, action_id, action, node, enabled, standard_value, text
 			gui.set_enabled(checkNode, true)
 			gui.set_color(bgNode, D.colors.accenthover)
 		end
-	elseif enabled and not gui.pick_node(bgNode, action.x, action.y) and D.nodes["active"] == node then
+	elseif enabled and not gui.pick_node(bgNode, D.currentMousePos.x, D.currentMousePos.y) and D.nodes["active"] == node then
 		gui.set_enabled(txtBox, false)
 		gui.set_color(bgNode, D.colors.active)
 		D.nodes["active"] = nil
@@ -206,7 +211,7 @@ function M.checkboxSelectall(self, action_id, action, node, othernodes, enabled,
 	end
 
 	-- Check if hovering above
-	if gui.pick_node(bgNode, action.x, action.y) and (D.nodes["active"]  == nil or D.nodes["active"]  == node) and enabled then
+	if gui.pick_node(bgNode, D.currentMousePos.x, D.currentMousePos.y) and (D.nodes["active"]  == nil or D.nodes["active"]  == node) and enabled then
 		-- Set as active node
 		D.nodes["active"] = node
 		if self.checkbox[node].value then
@@ -250,7 +255,7 @@ function M.checkboxSelectall(self, action_id, action, node, othernodes, enabled,
 				gui.set_color(otherBgNode, D.colors.accent)
 			end
 		end
-	elseif enabled and not gui.pick_node(bgNode, action.x, action.y) and D.nodes["active"] == node then
+	elseif enabled and not gui.pick_node(bgNode, D.currentMousePos.x, D.currentMousePos.y) and D.nodes["active"] == node then
 		gui.set_enabled(txtBox, false)
 		gui.set_color(bgNode, D.colors.active)
 		D.nodes["active"] = nil

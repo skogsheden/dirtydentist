@@ -54,6 +54,11 @@ end
 
 
 function M.slider(self, action_id, action, node, enabled, showpopup, min, max)
+	if action.x ~= nil then
+		D.currentMousePos.x = action.x
+		D.currentMousePos.y = action.y
+	end
+	
 	-- Check if can be activated
 	self.selectedNode = D.nodes["active"] or nil
 	self.slider = self.slider or {}
@@ -85,7 +90,7 @@ function M.slider(self, action_id, action, node, enabled, showpopup, min, max)
 	self.slider[node].min = min
 	self.slider[node].max = max
 	
-	if (gui.pick_node(bgNode, action.x, action.y) and enabled and (self.selectedNode == nil or self.selectedNode == node)) or self.slider[node].pressed then
+	if (gui.pick_node(bgNode, D.currentMousePos.x, D.currentMousePos.y) and enabled and (self.selectedNode == nil or self.selectedNode == node)) or self.slider[node].pressed then
 		-- Get size
 		local slider_pos = gui.get_screen_position(slidebg)
 		local slider_fillsize = gui.get_size(slidelevel)
@@ -95,7 +100,7 @@ function M.slider(self, action_id, action, node, enabled, showpopup, min, max)
 		local widthmod = window.get_size()/sys.get_config_int("display.width")
 
 		-- Handle input
-		if action_id == hash("touch") and gui.pick_node(handle, action.x, action.y) and action.pressed and self.slider[node].pressed == false then
+		if action_id == hash("touch") and gui.pick_node(handle, D.currentMousePos.x, D.currentMousePos.y) and action.pressed and self.slider[node].pressed == false then
 			self.slider[node].pressed = true
 		elseif self.slider[node].pressed and action_id == hash("touch") and action.released then
 			print("action relerased")
@@ -122,10 +127,10 @@ function M.slider(self, action_id, action, node, enabled, showpopup, min, max)
 				gui.set_enabled(textbox, true)
 			end
 		-- I pressed on slider
-		elseif action_id == hash("touch") and gui.pick_node(slidebg, action.x, action.y) and action.pressed and not gui.pick_node(handle, action.x, action.y) then
-			gui.set_screen_position(handle, vmath.vector3(D.valuelimit(action.x*widthmod, slider_fillpos.x, slider_fillpos.x + 2*(slider_pos.x-slider_fillpos.x)),handle_start.y, handle_start.z ))
+	elseif action_id == hash("touch") and gui.pick_node(slidebg, D.currentMousePos.x, D.currentMousePos.y) and action.pressed and not gui.pick_node(handle, D.currentMousePos.x, D.currentMousePos.y) then
+		gui.set_screen_position(handle, vmath.vector3(D.valuelimit(D.currentMousePos.x*widthmod, slider_fillpos.x, slider_fillpos.x + 2*(slider_pos.x-slider_fillpos.x)),handle_start.y, handle_start.z ))
 			gui.set_size(slidelevel, vmath.vector3(gui.get_position(handle).x + (slider_size.x/2), slider_fillsize.y, slider_fillsize.z))
-		elseif not gui.pick_node(handle, action.x, action.y) then
+		elseif not gui.pick_node(handle, D.currentMousePos.x, D.currentMousePos.y) then
 			if showpopup then
 				gui.set_enabled(textbox, false)
 			end
@@ -139,7 +144,7 @@ function M.slider(self, action_id, action, node, enabled, showpopup, min, max)
 			gui.set_size(textbox, vmath.vector3(text_width + 20, current_size.y, current_size.z))
 			gui.set_size(text, vmath.vector3(text_width + 20, current_size.y, current_size.z))
 		end
-	elseif not gui.pick_node(bgNode, action.x, action.y) and self.selectedNode == node then
+	elseif not gui.pick_node(bgNode, D.currentMousePos.x, D.currentMousePos.y) and self.selectedNode == node then
 		D.nodes["active"] = nil
 		self.slider[node].pressed = false
 		gui.set_scale(handleCenter, vmath.vector3(1,1,0))

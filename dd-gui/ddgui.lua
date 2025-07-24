@@ -61,6 +61,7 @@ D.isMobileDevice = false
 D.scrollSpeed = 18
 D.textMagnification = 0.75
 D.nodes = {}
+D.currentMousePos = {}
 
 -- Localization strings
 D.no_entries = "No entries found"

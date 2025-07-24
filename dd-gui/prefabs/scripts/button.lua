@@ -15,6 +15,11 @@ function M.toggleActive(self, node, enabled)
 end
 
 function M.togglebutton(self, action_id, action, node, enabled, text)
+	if action.x ~= nil then
+		D.currentMousePos.x = action.x
+		D.currentMousePos.y = action.y
+	end
+	
 	-- Get nodes
 	local bgNode = gui.get_node(node .. "/bg")
 	local textNode = gui.get_node(node .. "/text")
@@ -30,7 +35,7 @@ function M.togglebutton(self, action_id, action, node, enabled, text)
 	end
 
 	if enabled and (self.selectedNode == nil or self.selectedNode == node) then
-		if gui.pick_node(bgNode, action.x, action.y) then
+		if gui.pick_node(bgNode, D.currentMousePos.x, D.currentMousePos.y) then
 			if action_id == hash("touch") and action.pressed then
 				pressed = not pressed
 				self.pressed_buttons[node] = pressed
@@ -56,6 +61,11 @@ function M.togglebutton(self, action_id, action, node, enabled, text)
 end
 
 function M.button(self, action_id, action, node, enabled, accent, text)
+	if action.x ~= nil then
+		D.currentMousePos.x = action.x
+		D.currentMousePos.y = action.y
+	end
+	
 	-- Get nodes
 	local bgNode = gui.get_node(node .. "/bg")
 	local textNode = gui.get_node(node .. "/text")
@@ -82,7 +92,7 @@ function M.button(self, action_id, action, node, enabled, accent, text)
 
 	if enabled and (self.selectedNode == nil or self.selectedNode == node) then
 		-- Check if the cursor is over the button
-		if gui.pick_node(bgNode, action.x, action.y) then
+		if gui.pick_node(bgNode, D.currentMousePos.x, D.currentMousePos.y) then
 			if action_id == hash("touch") and action.pressed then
 				-- Button is pressed
 				pressed = true

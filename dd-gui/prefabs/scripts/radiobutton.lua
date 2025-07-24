@@ -4,6 +4,11 @@
 local M = {}
 
 function M.radiobutton(self, action_id, action, node, enabled, group)
+	if action.x ~= nil then
+		D.currentMousePos.x = action.x
+		D.currentMousePos.y = action.y
+	end
+	
 	-- Load nodes
 	local bgNode = gui.get_node(node .. "/bg")
 	local centerNode = gui.get_node(node .. "/center")
@@ -13,7 +18,7 @@ function M.radiobutton(self, action_id, action, node, enabled, group)
 	self.selectedNode = D.nodes["active"] or nil
 
 	-- Check if hovering above
-	if gui.pick_node(bgNode, action.x, action.y) and enabled and (self.selectedNode == nil or self.selectedNode == node) then
+	if gui.pick_node(bgNode, D.currentMousePos.x, D.currentMousePos.y) and enabled and (self.selectedNode == nil or self.selectedNode == node) then
 		-- Set as active node
 		D.nodes["active"] = node
 		if self.radiobutton[node] then
@@ -44,7 +49,7 @@ function M.radiobutton(self, action_id, action, node, enabled, group)
 			end
 		end
 		gui.set_scale(centerNode, vmath.vector3(1.5,1.5,1))
-	elseif enabled and not gui.pick_node(bgNode, action.x, action.y) and self.selectedNode == node then
+	elseif enabled and not gui.pick_node(bgNode, D.currentMousePos.x, D.currentMousePos.y) and self.selectedNode == node then
 		D.nodes["active"] = nil
 		if self.radiobutton[node] then
 			gui.set_color(bgNode, D.colors.accent)
