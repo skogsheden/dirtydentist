@@ -14,7 +14,7 @@ function M.setValueAutobox(self, node, value, active)
 	local selected_text = gui.get_node(node .. "/selecttext")
 	local hiddenText = gui.get_node(node .. "/hiddentext")
 	local arrow = gui.get_node(node .. "/arrow")
-	
+
 	self.selectedNode = D.nodes["active"] or nil
 	self.comboboxData = self.comboboxData or {}
 	self.comboboxData[node] = self.comboboxData[node] or {}
@@ -42,7 +42,7 @@ function M.initialize(self, node, list, up, enabled)
 	-- get nodes
 	local textbox = gui.get_node(node .. "/textbox")
 	local mask = gui.get_node(node .. "/bg")
-	
+
 	self.comboboxData[node].open = false -- start as closed
 	self.comboboxData[node].scrolling = false -- Not scrolling
 
@@ -90,7 +90,7 @@ function M.createComboboxList(self, node, list, use_mag)
 		self.comboboxData[node].mag = 1
 	end
 	gui.set_scale(orginaltext, vmath.vector3(self.comboboxData[node].mag,self.comboboxData[node].mag,1))
-	
+
 	--Reset color of node
 	gui.set_color(orginalnode,D.colors.active)
 
@@ -127,7 +127,7 @@ function M.createComboboxList(self, node, list, use_mag)
 					local newnode = gui.clone(orginalnode)
 					local newtext = gui.clone(orginaltext)
 					local newselect = gui.clone(orginalselect)
-					
+
 					-- assagin to correct template
 					gui.set_parent(newtext, newnode)
 					gui.set_parent(newnode, dd_obj)	
@@ -135,7 +135,7 @@ function M.createComboboxList(self, node, list, use_mag)
 					gui.set_id(newnode, node .. "/button" .. k)
 					gui.set_id(newtext, node .. "/text" .. k)
 					gui.set_id(newselect, node .. "/selected" .. k)
-					
+
 					--set text value, position and check if selected 
 					if list[k+1] == self.comboboxData[node].value then
 						gui.set_text(newtext, list[k+1])
@@ -161,7 +161,7 @@ function M.combobox(self, action_id, action, node, list, enabled, up, use_mag, s
 		D.currentMousePos.x = action.x
 		D.currentMousePos.y = action.y
 	end
-	
+
 	local textbox = gui.get_node(node .. "/textbox")
 	local selected_text = gui.get_node(node .. "/selecttext")
 	local mask = gui.get_node(node .. "/bg")
@@ -172,7 +172,7 @@ function M.combobox(self, action_id, action, node, list, enabled, up, use_mag, s
 	self.comboboxData[node] = self.comboboxData[node] or {}
 	self.comboboxData[node].initialize = self.comboboxData[node].initialize or false
 	self.comboboxData[node].scroll = self.comboboxData[node].scroll or {}	
-	
+
 	if not self.comboboxData[node].initialize then
 		-- Load or initalize variables
 		self.comboboxData[node].open = self.comboboxData[node].open or false
@@ -194,7 +194,7 @@ function M.combobox(self, action_id, action, node, list, enabled, up, use_mag, s
 		else
 			gui.set_size(arrow, vmath.vector3(20,-20,0))
 		end
-		
+
 		-- Use magnification options
 		if use_mag then
 			self.comboboxData[node].mag = D.textMagnification
@@ -221,7 +221,7 @@ function M.combobox(self, action_id, action, node, list, enabled, up, use_mag, s
 	else
 		gui.set_color(arrow, D.colors.inactive)
 	end
-	
+
 	-- Hovering and enabled
 	if action ~= nil then
 		if gui.pick_node(textbox, D.currentMousePos.x, D.currentMousePos.y) and enabled then
@@ -256,7 +256,7 @@ function M.combobox(self, action_id, action, node, list, enabled, up, use_mag, s
 		elseif not enabled then
 			gui.set_color(textbox, D.colors.inactive)
 			gui.set_color(arrow, D.colors.inactive)
-			
+
 			if self.selectedNode == node then
 				D.nodes["active"], self.selectedNode = nil, nil
 			end
@@ -272,7 +272,7 @@ function M.combobox(self, action_id, action, node, list, enabled, up, use_mag, s
 		-- get nodes to use
 		local dragpos = gui.get_node(node .. "/dragpos")
 		local dd_obj = gui.get_node(node .. "/dddrag")
-		
+
 		-- If boxes not created
 		if not self.comboboxData[node].init then
 			M.createComboboxList(self, node, list, use_mag)
@@ -283,13 +283,13 @@ function M.combobox(self, action_id, action, node, list, enabled, up, use_mag, s
 		local listOfButton = {"/button"}
 		local listOfText = {"/text"}
 		local listOfSelect = {"/selected"}
-		
+
 		for i = 1 , self.comboboxData[node].count, 1 do 
 			listOfButton[i+1] = "/button" .. i
 			listOfText[i+1] = "/text" .. i
 			listOfSelect[i+1] = "/selected" .. i
 		end	
-		
+
 		-- Scrolling is enabeled when more than 7 items in dropdown
 		if self.comboboxData[node].count < 6 then
 			gui.set_enabled(dragpos, false)
@@ -297,23 +297,23 @@ function M.combobox(self, action_id, action, node, list, enabled, up, use_mag, s
 			gui.set_enabled(dragpos, true)
 			if action_id == hash("touch") and action.pressed then
 				self.comboboxData[node].scroll.active = true
-				self.comboboxData[node].scroll.pos = vmath.vector3(action.x, action.y, 0)
+				self.comboboxData[node].scroll.pos = vmath.vector3(D.currentMousePos.x, D.currentMousePos.y, 0)
 			elseif action_id == hash("touch") and action.released then
 				self.comboboxData[node].scroll.active = false
-				self.comboboxData[node].scroll.pos = vmath.vector3(action.x, action.y, 0)
+				self.comboboxData[node].scroll.pos = vmath.vector3(D.currentMousePos.x, D.currentMousePos.y, 0)
 			end
 			if self.comboboxData[node].scroll.active then
 				local currentPos = gui.get_position(dd_obj)
-				self.comboboxData[node].scroll.delta = self.comboboxData[node].scroll.pos - vmath.vector3(action.x, action.y, 0)
-				self.comboboxData[node].scroll.pos = vmath.vector3(action.x, action.y, 0)
+				self.comboboxData[node].scroll.delta = self.comboboxData[node].scroll.pos - vmath.vector3(D.currentMousePos.x, D.currentMousePos.y, 0)
+				self.comboboxData[node].scroll.pos = vmath.vector3(D.currentMousePos.x, D.currentMousePos.y, 0)
 				currentPos.y =  D.valuelimit(currentPos.y - self.comboboxData[node].scroll.delta.y, 0,self.comboboxData[node].size -170)
 				gui.set_position(dd_obj, currentPos)
-			-- Scrollwheel
-			elseif self.comboboxData[node].open and action_id == hash("wheelup") and gui.pick_node(dd_obj, action.x, action.y) then
+				-- Scrollwheel
+			elseif self.comboboxData[node].open and action_id == hash("wheelup") and gui.pick_node(dd_obj, D.currentMousePos.x, D.currentMousePos.y) then
 				local currentPos = gui.get_position(dd_obj)
 				currentPos.y = D.valuelimit((currentPos.y - D.scrollSpeed),0,self.comboboxData[node].size -200)
 				gui.set_position(dd_obj, currentPos)
-			elseif self.comboboxData[node].open and action_id == hash("wheeldown") and gui.pick_node(dd_obj, action.x, action.y) then
+			elseif self.comboboxData[node].open and action_id == hash("wheeldown") and gui.pick_node(dd_obj, D.currentMousePos.x, D.currentMousePos.y) then
 				local currentPos = gui.get_position(dd_obj)
 				currentPos.y = D.valuelimit((currentPos.y + D.scrollSpeed),0,self.comboboxData[node].size -170)
 				gui.set_position(dd_obj, currentPos)
@@ -368,7 +368,7 @@ function M.combobox(self, action_id, action, node, list, enabled, up, use_mag, s
 					self.comboboxData[node].value = gui.get_text(gui.get_node(node .. listOfText[k]))
 					gui.set_text(selected_text, self.comboboxData[node].value)
 					gui.set_color(gui.get_node(node .. listOfButton[k]), D.colors.select)
-					
+
 					-- Close dropdown
 					gui.set_enabled(mask, false) 
 					gui.set_text(selected_text, self.comboboxData[node].value)
@@ -382,9 +382,9 @@ function M.combobox(self, action_id, action, node, list, enabled, up, use_mag, s
 			end	
 		end
 		-- Check if value pressed
-		if gui.pick_node(mask, action.x, action.y) then
+		if gui.pick_node(mask, D.currentMousePos.x, D.currentMousePos.y) then
 			for k in pairs (listOfButton) do
-				if action_id == hash("touch") and action.released and self.comboboxData[node].open and gui.pick_node(gui.get_node(node .. listOfButton[k]), action.x, action.y) then
+				if action_id == hash("touch") and action.released and self.comboboxData[node].open and gui.pick_node(gui.get_node(node .. listOfButton[k]), D.currentMousePos.x, D.currentMousePos.y) then
 					if gui.get_text(gui.get_node(node .. listOfText[k])) ~= D.noentries then
 						self.comboboxData[node].value = gui.get_text(gui.get_node(node .. listOfText[k]))
 						gui.set_text(selected_text, self.comboboxData[node].value)
@@ -398,12 +398,12 @@ function M.combobox(self, action_id, action, node, list, enabled, up, use_mag, s
 						D.nodes["active"], self.selectedNode = nil, nil
 						break
 					end
-				elseif self.comboboxData[node].open and gui.pick_node(gui.get_node(node .. listOfButton[k]), action.x, action.y) and self.comboboxData[node].value ~= gui.get_text(gui.get_node(node .. listOfText[k])) then
+				elseif self.comboboxData[node].open and gui.pick_node(gui.get_node(node .. listOfButton[k]), D.currentMousePos.x, D.currentMousePos.y) and self.comboboxData[node].value ~= gui.get_text(gui.get_node(node .. listOfText[k])) then
 					gui.set_color(gui.get_node(node .. listOfButton[k]), D.colors.hover)
-				elseif self.comboboxData[node].open and gui.pick_node(gui.get_node(node .. listOfButton[k]), action.x, action.y) and self.comboboxData[node].value == gui.get_text(gui.get_node(node .. listOfText[k])) then
+				elseif self.comboboxData[node].open and gui.pick_node(gui.get_node(node .. listOfButton[k]), D.currentMousePos.x, D.currentMousePos.y) and self.comboboxData[node].value == gui.get_text(gui.get_node(node .. listOfText[k])) then
 					gui.set_color(gui.get_node(node .. listOfButton[k]), D.colors.select)
 					gui.set_scale(gui.get_node(node .. listOfSelect[k]), vmath.vector3(1,0.75,1))
-				elseif self.comboboxData[node].open and not gui.pick_node(gui.get_node(node .. listOfButton[k]), action.x, action.y) and self.comboboxData[node].value == gui.get_text(gui.get_node(node .. listOfText[k])) then
+				elseif self.comboboxData[node].open and not gui.pick_node(gui.get_node(node .. listOfButton[k]), D.currentMousePos.x, D.currentMousePos.y) and self.comboboxData[node].value == gui.get_text(gui.get_node(node .. listOfText[k])) then
 					gui.set_color(gui.get_node(node .. listOfButton[k]), D.colors.hover)
 					gui.set_scale(gui.get_node(node .. listOfSelect[k]), vmath.vector3(1,1,1))
 				elseif self.comboboxData[node].value ~= gui.get_text(gui.get_node(node .. listOfText[k])) and self.comboboxData[node].open then
@@ -420,7 +420,7 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 		D.currentMousePos.x = action.x
 		D.currentMousePos.y = action.y
 	end
-	
+
 	local textbox = gui.get_node(node .. "/textbox")
 	local selected_text = gui.get_node(node .. "/selecttext")
 	local mask = gui.get_node(node .. "/bg")
@@ -428,7 +428,7 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 	local idNode = gui.get_node(node .. "/ID")
 	local markerNode = gui.get_node(node .. "/marker")
 	local hiddenText = gui.get_node(node .. "/hiddentext")
-	
+
 
 	self.selectedNode = D.nodes["active"] or nil
 	self.comboboxData = self.comboboxData or {}
@@ -466,13 +466,13 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 			self.comboboxData[node].mag = D.textMagnification
 			gui.set_size(selected_text, gui.get_size(selected_text)/D.textMagnification)
 			gui.set_size(hiddenText, gui.get_size(hiddenText)/D.textMagnification)
-			
+
 		else
 			self.comboboxData[node].mag = 1
 		end
 		gui.set_scale(selected_text, vmath.vector3(self.comboboxData[node].mag,self.comboboxData[node].mag,1))
 		gui.set_scale(hiddenText, vmath.vector3(self.comboboxData[node].mag,self.comboboxData[node].mag,1))
-		
+
 		-- Initalize dropdown
 		M.initialize(self, node, list, up, enabled)
 	end
@@ -538,7 +538,7 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 		elseif not enabled and D.nodes["tab"] == false then
 			gui.set_color(textbox, D.colors.inactive)
 			gui.set_color(arrow, D.colors.inactive)
-			
+
 			if self.selectedNode == node then
 				gui.set_enabled(markerNode, false)
 				D.stop_pulsate(markerNode)
@@ -554,7 +554,7 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 			gui.set_color(arrow, D.colors.accent)
 		end
 	end
-		
+
 
 	-- If tab to
 	if action_id == hash("tab") and action.pressed and tab_to ~= nil and D.nodes["tab"] == false and D.nodes["active"] == node then
@@ -589,10 +589,10 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 		widthmod = window.get_size()/sys.get_config_int("display.width")
 
 		-- active textinput
-		if action_id == hash("touch") and action.pressed and gui.pick_node(selected_text, action.x, action.y) then
+		if action_id == hash("touch") and action.pressed and gui.pick_node(selected_text, D.currentMousePos.x, D.currentMousePos.y) then
 			gui.set_enabled(markerNode, true)
 			D.pulsate(markerNode)
-			
+
 			gui.set_color(textbox, D.colors.hover)
 			if gui.get_text(selected_text) == D.select_a_value or gui.get_text(selected_text) == D.no_entries then
 				gui.set_text(selected_text, "")
@@ -601,7 +601,7 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 			gui.set_text(hiddenText, gui.get_text(selected_text))
 
 			-- Set marker
-			gui.set_screen_position(markerNode, vmath.vector3(action.x*widthmod,action.y,0)) 
+			gui.set_screen_position(markerNode, vmath.vector3(D.currentMousePos.x*widthmod,D.currentMousePos.y,0)) 
 			local markpos = gui.get_position(markerNode)
 			markpos.y = 0 
 
@@ -622,7 +622,7 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 			self.comboboxData[node].open = true
 			gui.set_enabled(markerNode, true)
 			D.pulsate(markerNode)
-			
+
 			gui.set_color(textbox, D.colors.hover)
 			if gui.get_text(selected_text) == D.select_a_value or gui.get_text(selected_text) == D.no_entries then
 				gui.set_text(selected_text, "")
@@ -755,13 +755,13 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 					foundInList[#foundInList+1] = list[k]
 				end
 			end	
-		self.comboboxData[node].count = #foundInList
-		M.createComboboxList(self, node, foundInList, use_mag)
-		gui.set_position(dd_obj, vmath.vector3(0,0,0))
-		self.comboboxData[node].value = gui.get_text(selected_text)
-		gui.set_enabled(mask, true)
-		self.comboboxData[node].open = true
-	end
+			self.comboboxData[node].count = #foundInList
+			M.createComboboxList(self, node, foundInList, use_mag)
+			gui.set_position(dd_obj, vmath.vector3(0,0,0))
+			self.comboboxData[node].value = gui.get_text(selected_text)
+			gui.set_enabled(mask, true)
+			self.comboboxData[node].open = true
+		end
 
 		-- Add buttons to list
 		local listOfButton = {"/button"}
@@ -781,23 +781,23 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 			gui.set_enabled(dragpos, true)
 			if action_id == hash("touch") and action.pressed then
 				self.comboboxData[node].scroll.active = true
-				self.comboboxData[node].scroll.pos = vmath.vector3(action.x, action.y, 0)
+				self.comboboxData[node].scroll.pos = vmath.vector3(D.currentMousePos.x, D.currentMousePos.y, 0)
 			elseif action_id == hash("touch") and action.released then
 				self.comboboxData[node].scroll.active = false
-				self.comboboxData[node].scroll.pos = vmath.vector3(action.x, action.y, 0)
+				self.comboboxData[node].scroll.pos = vmath.vector3(D.currentMousePos.x, D.currentMousePos.y, 0)
 			end
 			if self.comboboxData[node].scroll.active then
 				local currentPos = gui.get_position(dd_obj)
-				self.comboboxData[node].scroll.delta = self.comboboxData[node].scroll.pos - vmath.vector3(action.x, action.y, 0)
-				self.comboboxData[node].scroll.pos = vmath.vector3(action.x, action.y, 0)
+				self.comboboxData[node].scroll.delta = self.comboboxData[node].scroll.pos - vmath.vector3(D.currentMousePos.x, D.currentMousePos.y, 0)
+				self.comboboxData[node].scroll.pos = vmath.vector3(D.currentMousePos.x, D.currentMousePos.y, 0)
 				currentPos.y =  D.valuelimit(currentPos.y - self.comboboxData[node].scroll.delta.y, 0,self.comboboxData[node].size -170)
 				gui.set_position(dd_obj, currentPos)
-			-- Scrollwheel
-			elseif self.comboboxData[node].open and action_id == hash("wheelup") and gui.pick_node(dd_obj, action.x, action.y) then
+				-- Scrollwheel
+			elseif self.comboboxData[node].open and action_id == hash("wheelup") and gui.pick_node(dd_obj, D.currentMousePos.x, D.currentMousePos.y) then
 				local currentPos = gui.get_position(dd_obj)
 				currentPos.y = D.valuelimit((currentPos.y - D.scrollSpeed),0,self.comboboxData[node].size -200)
 				gui.set_position(dd_obj, currentPos)
-			elseif self.comboboxData[node].open and action_id == hash("wheeldown") and gui.pick_node(dd_obj, action.x, action.y) then
+			elseif self.comboboxData[node].open and action_id == hash("wheeldown") and gui.pick_node(dd_obj, D.currentMousePos.x, D.currentMousePos.y) then
 				local currentPos = gui.get_position(dd_obj)
 				currentPos.y = D.valuelimit((currentPos.y + D.scrollSpeed),0,self.comboboxData[node].size -170)
 				gui.set_position(dd_obj, currentPos)
