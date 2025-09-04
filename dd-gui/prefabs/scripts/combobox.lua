@@ -491,6 +491,71 @@ function M.combobox(self, action_id, action, node, list, enabled, up, use_mag, s
 	end
 	return self.comboboxData[node].value
 end
+
+-- Förbättrad helper function för säker dropdown-uppdatering
+local function updateDropdownSafe(self, node, list, currentText, use_mag)
+	-- Förhindra samtidiga uppdateringar
+	if self.comboboxData[node].updating_dropdown then
+		return false
+	end
+
+	self.comboboxData[node].updating_dropdown = true
+
+	local foundInList = {}
+
+	-- Filtrera lista baserat på aktuell text
+	if currentText and utf8.len(currentText) > 0 then
+		local lowerCurrentText = utf8.lower(currentText)
+		for i = 1, #list do
+			if list[i] and utf8.find(utf8.lower(list[i]), lowerCurrentText, 1, true) ~= nil then
+				foundInList[#foundInList + 1] = list[i]
+			end
+		end
+	else
+		-- Visa alla alternativ om tom text
+		for i = 1, #list do
+			if list[i] then
+				foundInList[#foundInList + 1] = list[i]
+			end
+		end
+	end
+
+	-- Uppdatera dropdown säkert
+	local success = pcall(M.deleteCombobox, self, node)
+	if success then
+		self.comboboxData[node].count = math.max(0, #foundInList - 1)
+		if #foundInList > 0 then
+			success = pcall(M.createComboboxList, self, node, foundInList, use_mag)
+			if success then
+				local dd_obj = gui.get_node(node .. "/dddrag")
+				gui.set_position(dd_obj, vmath.vector3(0,0,0))
+				local mask = gui.get_node(node .. "/bg")
+				gui.set_enabled(mask, true)
+				self.comboboxData[node].open = true
+				self.comboboxData[node].init = true
+				self.comboboxData[node].updating_dropdown = false
+				return true
+			end
+		else
+			-- Ingen matchning hittades - skapa tom lista men behåll dropdown öppen
+			self.comboboxData[node].count = 0
+			local emptyList = {D.no_entries or "No entries"}
+			success = pcall(M.createComboboxList, self, node, emptyList, use_mag)
+			if success then
+				local dd_obj = gui.get_node(node .. "/dddrag")
+				gui.set_position(dd_obj, vmath.vector3(0,0,0))
+				local mask = gui.get_node(node .. "/bg")
+				gui.set_enabled(mask, true)
+				self.comboboxData[node].open = true
+				self.comboboxData[node].init = true
+			end
+		end
+	end
+
+	self.comboboxData[node].updating_dropdown = false
+	return false
+end
+
 -- Förbättrad helper function för säker dropdown-uppdatering
 local function updateDropdownSafe(self, node, list, currentText, use_mag)
 	-- Förhindra samtidiga uppdateringar
@@ -936,89 +1001,86 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 			end
 		end
 
-		-- Textinmatning med separerad lista-uppdatering
+		-- Textinmatning med korrekt markörhantering
 		if action_id == hash("text") then
 			local hiddenTextContent = gui.get_text(hiddenText) or ""
 			local selectedTextContent = gui.get_text(selected_text) or ""
-			local newText = ""
+			local cursorPos = utf8.len(hiddenTextContent)
 
-			-- Bygg ny text baserat på nuvarande position
-			if utf8.len(hiddenTextContent) < utf8.len(selectedTextContent) then
-				local hiddenlength = utf8.len(hiddenTextContent)
-				local newHiddenText = hiddenTextContent .. action.text
-				local remainingText = ""
-				if hiddenlength < utf8.len(selectedTextContent) then
-					remainingText = utf8.sub(selectedTextContent, hiddenlength + 1, -1)
-				end
-				newText = newHiddenText .. remainingText
-				gui.set_text(hiddenText, newHiddenText)
-			elseif utf8.len(hiddenTextContent) == utf8.len(selectedTextContent) then
-				newText = selectedTextContent .. action.text
-				gui.set_text(hiddenText, newText)
+			-- Bygg ny text utifrån cursor
+			local before = hiddenTextContent
+			local after = ""
+			if cursorPos < utf8.len(selectedTextContent) then
+				after = utf8.sub(selectedTextContent, cursorPos + 1, -1)
 			end
 
-			-- Uppdatera text omedelbart
-			local textSuccess = updateTextDisplay(self, node, newText, true)
-			if not textSuccess then
-				return self.comboboxData[node].value -- Text för bred
+			local newHiddenText = before .. action.text
+			local newText = newHiddenText .. after
+
+			-- Uppdatera hiddenText och visad text
+			gui.set_text(hiddenText, newHiddenText)
+			gui.set_text(selected_text, newText)
+			self.comboboxData[node].value = newText
+
+			-- Flytta markören efter det insatta tecknet
+			local markerPos = gui.get_position(markerNode)
+			local success, width = pcall(gui.get_text_metrics_from_node, hiddenText)
+			if success and width then
+				markerPos.x = math.max(-90, width.width * (self.comboboxData[node].mag or 1) - 90)
+			else
+				markerPos.x = -90
 			end
+			gui.set_position(markerNode, markerPos)
 
 			-- Schemalägg lista-uppdatering separat
 			scheduleListUpdate(self, node, list, newText, use_mag)
 		end
+		
 
-		-- Backspace med separerad lista-uppdatering
+		-- Backspace som alltid raderar före markören
 		if action_id == hash("backspace") and action.pressed then
 			local hiddenTextContent = gui.get_text(hiddenText) or ""
 			local selectedTextContent = gui.get_text(selected_text) or ""
 
-			-- Kontrollera om det finns något att radera
-			if hiddenTextContent == "" and selectedTextContent == "" then
+			-- Skydd mot specialfall
+			if selectedTextContent == "" or 
+			selectedTextContent == D.select_a_value or 
+			selectedTextContent == D.no_entries then
 				return self.comboboxData[node].value
 			end
 
-			if selectedTextContent == D.select_a_value or selectedTextContent == D.no_entries then
-				return self.comboboxData[node].value
-			end
+			-- Markörposition = längden av hiddenText
+			local cursorPos = utf8.len(hiddenTextContent)
 
-			local newText = ""
-			local newHiddenText = ""
+			if cursorPos > 0 then
+				-- Ta bort tecknet före markören
+				local before = utf8.sub(hiddenTextContent, 1, cursorPos - 1)
+				local after  = utf8.sub(selectedTextContent, cursorPos + 1, -1)
+				local newHiddenText = before
+				local newText = before .. after
 
-			-- Hantera backspace baserat på cursor-position
-			if utf8.len(hiddenTextContent) == 0 and utf8.len(selectedTextContent) == 0 then
-				newText = ""
-				newHiddenText = ""
-			elseif utf8.len(hiddenTextContent) < utf8.len(selectedTextContent) then 
-				if utf8.len(hiddenTextContent) > 0 then
-					newHiddenText = utf8.sub(hiddenTextContent, 1, utf8.len(hiddenTextContent) - 1)
-					local remainingText = ""
-					local hiddenlength = utf8.len(newHiddenText)
-					if hiddenlength < utf8.len(selectedTextContent) then
-						remainingText = utf8.sub(selectedTextContent, hiddenlength + 1, -1)
-					end
-					newText = newHiddenText .. remainingText
+				gui.set_text(hiddenText, newHiddenText)
+				gui.set_text(selected_text, newText)
+				self.comboboxData[node].value = newText
+
+				-- Flytta markören
+				local markerPos = gui.get_position(markerNode)
+				local success, width = pcall(gui.get_text_metrics_from_node, hiddenText)
+				if success and width then
+					markerPos.x = math.max(-90, width.width * (self.comboboxData[node].mag or 1) - 90)
 				else
-					if utf8.len(selectedTextContent) > 0 then
-						newText = utf8.sub(selectedTextContent, 2, -1)
-						newHiddenText = ""
-					end
+					markerPos.x = -90
 				end
-			elseif utf8.len(hiddenTextContent) == utf8.len(selectedTextContent) then 
-				if utf8.len(hiddenTextContent) > 0 then
-					newText = utf8.sub(hiddenTextContent, 1, utf8.len(hiddenTextContent) - 1)
-					newHiddenText = newText
-				end
+				gui.set_position(markerNode, markerPos)
+
+				scheduleListUpdate(self, node, list, newText, use_mag)
+
+				-- Om markören står i början → gör ingenting
+			elseif cursorPos == 0 then
+				return self.comboboxData[node].value
 			end
-
-			gui.set_text(hiddenText, newHiddenText)
-
-			-- Uppdatera text omedelbart
-			updateTextDisplay(self, node, newText, true)
-
-			-- Schemalägg lista-uppdatering separat
-			scheduleListUpdate(self, node, list, newText, use_mag)
 		end
-
+		
 		-- Delete hantering
 		if action_id == hash("delete") and action.repeated then
 			local hiddenTextContent = gui.get_text(hiddenText) or ""
