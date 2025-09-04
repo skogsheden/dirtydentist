@@ -133,7 +133,7 @@ function M.createComboboxList(self, node, list, use_mag)
 
 	if use_mag then
 		self.comboboxData[node].mag = D.textMagnification
-		gui.set_size(orginaltext, gui.get_size(orginaltext)/D.textMagnification)
+		gui.set_scale(orginaltext, gui.get_size(orginaltext)/D.textMagnification)
 	else
 		self.comboboxData[node].mag = 1
 	end
@@ -248,7 +248,7 @@ function M.combobox(self, action_id, action, node, list, enabled, up, use_mag, s
 		-- Use magnification options
 		if use_mag then
 			self.comboboxData[node].mag = D.textMagnification
-			gui.set_size(selected_text, gui.get_size(selected_text)/D.textMagnification)
+			gui.set_scale(selected_text, gui.get_size(selected_text)/D.textMagnification)
 		else
 			self.comboboxData[node].mag = 1
 		end
