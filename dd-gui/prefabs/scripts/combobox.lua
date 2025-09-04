@@ -682,7 +682,7 @@ local function scheduleListUpdate(self, node, list, currentText, use_mag)
 		timer.cancel(self.comboboxData[node].updateTimer)
 	end
 
-	self.comboboxData[node].updateTimer = timer.delay(0.15, false, function()
+	self.comboboxData[node].updateTimer = timer.delay(0.50, false, function()
 		-- Kontrollera om vi fortfarande ska uppdatera
 		if self.comboboxData[node].pendingText and 
 		self.comboboxData[node].open then
@@ -1038,7 +1038,7 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 		
 
 		-- Backspace som alltid raderar före markören
-		if action_id == hash("backspace") and action.pressed then
+		if action_id == hash("backspace") and action.repeated then
 			local hiddenTextContent = gui.get_text(hiddenText) or ""
 			local selectedTextContent = gui.get_text(selected_text) or ""
 
