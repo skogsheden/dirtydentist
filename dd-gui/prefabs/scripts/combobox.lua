@@ -682,7 +682,7 @@ local function scheduleListUpdate(self, node, list, currentText, use_mag)
 		timer.cancel(self.comboboxData[node].updateTimer)
 	end
 
-	self.comboboxData[node].updateTimer = timer.delay(0.50, false, function()
+	self.comboboxData[node].updateTimer = timer.delay(0.20, false, function()
 		-- Kontrollera om vi fortfarande ska uppdatera
 		if self.comboboxData[node].pendingText and 
 		self.comboboxData[node].open then
