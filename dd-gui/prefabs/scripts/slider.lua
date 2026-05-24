@@ -4,19 +4,24 @@
 local M = {}
 
 function M.resetSlider(self, node)
+	self.slider = self.slider or {}
+	if not self.slider[node] then
+		return -- Slider not yet initialized, nothing to reset
+	end
+
 	local slidebg = gui.get_node(node .. "/slider_bg")
 	local slidelevel = gui.get_node(node .. "/slider_level")
 	local handle = gui.get_node(node .. "/handle")
 
 	local sliderBgSize = gui.get_size(slidebg)
 	local slider_fillsize = gui.get_size(slidelevel)
-	
+
 	gui.set_position(handle, vmath.vector3(0, 0, 0))
 	gui.set_size(slidelevel, vmath.vector3(sliderBgSize.x/2, slider_fillsize.y, slider_fillsize.z))
 	self.slider[node].value = (self.slider[node].min + self.slider[node].max)/2
 end
 
-function M.setvalueSlider(self, node, value, min, max)
+function M.setValueSlider(self, node, value, min, max, step)
 	self.slider = self.slider or {}
 	if self.slider[node] == nil then
 		self.slider[node] = {}
@@ -33,27 +38,33 @@ function M.setvalueSlider(self, node, value, min, max)
 	local sliderBgSize = gui.get_size(slidebg)
 	local slider_fillsize = gui.get_size(slidelevel)
 
-	-- Kontrollera att värdet ligger inom intervallet
+	-- Clamp value to [min, max]
 	value = math.max(min, math.min(value, max))
 
-	-- Normalisera värdet till intervallet [0, 1]
+	-- Snap to step grid if provided
+	if step and step > 0 then
+		value = math.floor(value / step + 0.5) * step
+		value = math.max(min, math.min(value, max))
+	end
+
+	-- Normalize value to [0, 1]
 	local range = max - min
 	local normalized_value = (value - min) / range
 
-	-- Beräkna längd och position
+	-- Calculate fill length and handle position
 	local length = normalized_value * sliderBgSize.x
 	local handle_position = sliderBgSize.x * normalized_value - sliderBgSize.x / 2
 
-	-- Uppdatera reglaget och handtaget
+	-- Apply to nodes
 	gui.set_position(handle, vmath.vector3(handle_position, 0, 0))
 	gui.set_size(slidelevel, vmath.vector3(length, slider_fillsize.y, slider_fillsize.z))
 
-	-- Spara det aktuella värdet
+	-- Store current value
 	self.slider[node].value = value
 end
 
 
-function M.slider(self, action_id, action, node, enabled, showpopup, min, max)
+function M.slider(self, action_id, action, node, enabled, showpopup, min, max, step)
 	if action ~= nil and action.x ~= nil then
 		D.currentMousePos.x = action.x
 		D.currentMousePos.y = action.y
@@ -82,7 +93,7 @@ function M.slider(self, action_id, action, node, enabled, showpopup, min, max)
 		gui.set_color(slidebg, D.colors.active)
 	end
 
-	-- I values for min max not set	
+	-- Fall back to 0-100 if min/max not provided
 	if min == nil or max == nil then
 		min = 0
 		max = 100
@@ -103,8 +114,7 @@ function M.slider(self, action_id, action, node, enabled, showpopup, min, max)
 		if action_id == hash("touch") and gui.pick_node(handle, D.currentMousePos.x, D.currentMousePos.y) and action.pressed and self.slider[node].pressed == false then
 			self.slider[node].pressed = true
 		elseif self.slider[node].pressed and action_id == hash("touch") and action.released then
-			print("action relerased")
-			self.slider[node].pressed = false
+				self.slider[node].pressed = false
 			if gui.pick_node(handle, action.x, action.y) then
 				gui.set_scale(handleCenter, vmath.vector3(1.5,1.5,0))
 				gui.set_color(handleCenter, D.colors.accenthover)
@@ -136,13 +146,23 @@ function M.slider(self, action_id, action, node, enabled, showpopup, min, max)
 			end
 		end
 
-		-- Update text if to be shown
+		-- Update text if to be shown.
+		-- Compute the display value from the current handle position so the popup
+		-- is always in sync with the handle rather than showing the previous frame's value.
 		if showpopup then
-			gui.set_text(text, self.slider[node].value)
-			local text_width = gui.get_text_metrics_from_node(text).width
+			local curPos  = gui.get_position(handle)
+			local curVal  = self.slider[node].min + (self.slider[node].max - self.slider[node].min) * (curPos.x + slider_size.x / 2) / slider_size.x
+			if step and step > 0 then
+				curVal = math.floor(curVal / step + 0.5) * step
+				curVal = math.max(self.slider[node].min, math.min(curVal, self.slider[node].max))
+			else
+				curVal = math.floor(curVal)
+			end
+			gui.set_text(text, tostring(curVal))
+			local text_width  = gui.get_text_metrics_from_node(text).width
 			local current_size = gui.get_size(text)
 			gui.set_size(textbox, vmath.vector3(text_width + 20, current_size.y, current_size.z))
-			gui.set_size(text, vmath.vector3(text_width + 20, current_size.y, current_size.z))
+			gui.set_size(text,    vmath.vector3(text_width + 20, current_size.y, current_size.z))
 		end
 	elseif not gui.pick_node(bgNode, D.currentMousePos.x, D.currentMousePos.y) and self.selectedNode == node then
 		D.nodes["active"] = nil
@@ -151,12 +171,39 @@ function M.slider(self, action_id, action, node, enabled, showpopup, min, max)
 		gui.set_color(handleCenter, D.colors.accent)
 	end
 
+	-- Apply disabled visual state to the handle so it looks inactive.
+	if not enabled then
+		gui.set_color(handleCenter, D.colors.inactive)
+		gui.set_color(slidelevel,   D.colors.inactive)
+	end
+
 	-- Calculate value
 	local currentValue = (gui.get_position(handle).x+slider_size.x/2)/(slider_size.x)
 	local recalculated_value = self.slider[node].min + (self.slider[node].max - self.slider[node].min) * currentValue
-	recalculated_value = math.floor(recalculated_value)
+	if step and step > 0 then
+		recalculated_value = math.floor(recalculated_value / step + 0.5) * step
+		recalculated_value = math.max(self.slider[node].min, math.min(recalculated_value, self.slider[node].max))
+	else
+		recalculated_value = math.floor(recalculated_value)
+	end
+	local prev = self.slider[node].lastValue
+	if prev == nil then prev = recalculated_value end -- no spurious change on first frame
+	local changed = (recalculated_value ~= prev)
 	self.slider[node].value = recalculated_value
-	return self.slider[node].value
+	self.slider[node].lastValue = recalculated_value
+	return self.slider[node].value, changed
 end
+
+-- Change a slider's min/max range at runtime without resetting the handle position.
+-- The stored value is not updated here; call setValueSlider afterwards if needed.
+function M.setMinMax(self, node, min, max)
+	self.slider = self.slider or {}
+	self.slider[node] = self.slider[node] or {}
+	self.slider[node].min = min
+	self.slider[node].max = max
+end
+
+-- Deprecated alias – use setValueSlider
+M.setvalueSlider = M.setValueSlider
 
 return M

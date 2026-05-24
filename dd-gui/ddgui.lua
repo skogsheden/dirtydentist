@@ -31,17 +31,39 @@ D.auto_suggestbox = combobox.auto_suggestbox
 D.textblock = textblock.textBlock
 
 -- Expose additional functions
-D.clearTextbox = textbox.clearTextbox
-D.setTextbox = textbox.setTextbox
-D.toggleActive = button.toggleActive
-D.initializeCombo = combobox.initialize
-D.setValueCombobox = combobox.setValueCombobox
-D.setValueAutobox = combobox.setValueAutobox
-D.resetSlider = slider.resetSlider
-D.setvalueSlider = slider.setvalueSlider
-D.initializeCheckbox = checkbox.initializeCheckbox
-D.clearCheckbox = checkbox.clearCheckbox
-D.setTextblock = textblock.setTextblock
+D.clearTextbox              = textbox.clearTextbox
+D.setTextbox                = textbox.setTextbox
+D.clearTextboxMultiline     = textbox.clearTextboxMultiline
+D.setTextboxMultiline       = textbox.setTextboxMultiline
+D.appendLineTextboxMultiline = textbox.appendLineTextboxMultiline
+D.toggleActive              = button.toggleActive
+D.setTogglebutton           = button.setTogglebutton
+D.initializeCombo           = combobox.initialize
+D.setValueCombobox          = combobox.setValueCombobox
+D.setValueAutobox           = combobox.setValueAutobox
+D.clearCombobox             = combobox.clearCombobox
+D.clearAutobox              = combobox.clearAutobox
+D.setListCombobox           = combobox.setListCombobox
+D.setListAutobox            = combobox.setListAutobox
+D.initializeAutobox         = combobox.initializeAutobox
+D.resetSlider               = slider.resetSlider
+D.setValueSlider            = slider.setValueSlider
+D.setvalueSlider            = slider.setvalueSlider -- deprecated alias, use setValueSlider
+D.setMinMax                 = slider.setMinMax
+D.initializeCheckbox        = checkbox.initializeCheckbox
+D.clearCheckbox             = checkbox.clearCheckbox
+D.setCheckbox               = checkbox.setCheckbox
+D.toggleCheckbox            = checkbox.toggleCheckbox
+D.setTextblock              = textblock.setTextblock
+D.clearTextblock            = textblock.clearTextblock
+D.appendTextblock           = textblock.appendTextblock
+D.scrollToBottomTextblock   = textblock.scrollToBottomTextblock
+D.scrollToTopTextblock      = textblock.scrollToTopTextblock
+D.getTextblock              = textblock.getTextblock
+D.initializeRadiobutton     = radiobutton.initializeRadiobutton
+D.setRadiobutton            = radiobutton.setRadiobutton
+D.clearRadiogroup           = radiobutton.clearRadiogroup
+D.getSelectedInGroup        = radiobutton.getSelectedInGroup
 
 -- Shared variables (if needed)
 D.colors = {
@@ -61,11 +83,70 @@ D.isMobileDevice = false
 D.scrollSpeed = 18
 D.textMagnification = 0.75
 D.nodes = {}
-D.currentMousePos = {}
+D.currentMousePos = {x = 0, y = 0}
 
 -- Localization strings
 D.no_entries = "No entries found"
 D.select_a_value = "Select a value"
+
+-- Return the current stored value for any widget node.
+-- Works for textbox, combobox/autobox (comboboxData.value),
+-- slider (sliderData.value), checkbox, radiobutton, and togglebutton.
+function D.getValue(self, node)
+	if self.textboxData and self.textboxData[node] then
+		-- textboxMultiline returns the joined text string
+		if self.textboxData[node].lines then
+			local parts = {}
+			for i = 1, #self.textboxData[node].lines do
+				parts[i] = gui.get_text(self.textboxData[node].lines[i].text)
+			end
+			return table.concat(parts, "\n")
+		end
+		return self.textboxData[node].text or ""
+	elseif self.comboboxData and self.comboboxData[node] then
+		return self.comboboxData[node].value
+	elseif self.slider and self.slider[node] then
+		return self.slider[node].value
+	elseif self.checkbox and self.checkbox[node] then
+		return self.checkbox[node].value
+	elseif self.radiobutton and self.radiobutton[node] then
+		return self.radiobutton[node]
+	elseif self.pressed_buttons and self.pressed_buttons[node] ~= nil then
+		return self.pressed_buttons[node]
+	end
+	return nil
+end
+
+-- Programmatically give focus to a textbox node (single-line or multi-line).
+-- Activates the pulsating marker so keyboard input is routed to that node.
+function D.focusNode(self, node)
+	D.nodes["active"] = node
+	D.nodes["tab"]    = true  -- triggers the multiline path to sync the marker
+end
+
+-- Release focus from whichever widget currently has it.
+function D.clearFocus(self)
+	D.nodes["active"] = nil
+	D.nodes["tab"]    = false
+end
+
+-- Cross-widget enabled/disabled state helpers.
+-- Store a per-node enabled flag that calling scripts can read back via D.getEnabled.
+-- The widget functions themselves still receive 'enabled' directly, but these helpers
+-- let you centralise enable/disable decisions across scenes without re-checking every
+-- individual widget state.
+function D.setEnabled(self, node, bool)
+	self.widgetEnabled       = self.widgetEnabled or {}
+	self.widgetEnabled[node] = bool
+end
+
+-- Returns the stored enabled state for a node, or true if none has been set.
+function D.getEnabled(self, node)
+	if self.widgetEnabled and self.widgetEnabled[node] ~= nil then
+		return self.widgetEnabled[node]
+	end
+	return true
+end
 
 -- Function to set localization strings
 function D.set_localization_strings(no_entries_str, select_value_str)

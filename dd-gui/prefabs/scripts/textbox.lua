@@ -36,7 +36,7 @@ local function editLine(self, action, node, type, equal_length)
 		elseif type == "backspace" then
 			text = utf8.sub(text, 1, -2)
 		elseif type == "del" then
-			print("nothing to delete")
+			-- cursor already at end; nothing to delete
 		end
 		gui.set_text(hiddenText, text)
 		gui.set_text(textNode, text)
@@ -46,7 +46,10 @@ local function editLine(self, action, node, type, equal_length)
 end
 
 -- Main function for textbox
-function M.textbox(self, action_id, action, node, enabled, tab_to)
+-- placeholder : string shown when field is empty and inactive (optional)
+-- maxlength   : maximum number of UTF-8 characters allowed (optional, nil = unlimited)
+-- readonly    : when true the field cannot be focused or edited (optional)
+function M.textbox(self, action_id, action, node, enabled, tab_to, placeholder, maxlength, readonly)
 	if action ~= nil and action.x ~= nil then
 		D.currentMousePos.x = action.x
 		D.currentMousePos.y = action.y
@@ -62,15 +65,25 @@ function M.textbox(self, action_id, action, node, enabled, tab_to)
 	self.textboxData = self.textboxData or {}
 	self.textboxData[node] = self.textboxData[node] or {}
 	self.textboxData[node].text = self.textboxData[node].text or ""
-	self.textboxData[node].enabled = self.textboxData[node].enabled or enabled
-	
+	self.textboxData[node].enabled = enabled
+
 	D.nodes["active"] = D.nodes["active"] or nil
 	D.nodes["tab"] = D.nodes["tab"] or false
-	gui.set_text(textNode, self.textboxData[node].text)
+
+	-- Display placeholder when field is empty and not focused
+	if placeholder and self.textboxData[node].text == "" and D.nodes["active"] ~= node then
+		gui.set_text(textNode, placeholder)
+		gui.set_color(textNode, D.colors.inactive)
+	else
+		gui.set_text(textNode, self.textboxData[node].text)
+		if placeholder then
+			gui.set_color(textNode, D.colors.black)
+		end
+	end
 
 	if gui.pick_node(bgNode, D.currentMousePos.x, D.currentMousePos.y) and self.textboxData[node].enabled then
 		gui.set_color(bgNode, D.colors.hover)
-		if action_id == hash("touch") and action.pressed and gui.pick_node(bgNode, D.currentMousePos.x, D.currentMousePos.y) and D.nodes["active"] == nil then
+		if action_id == hash("touch") and action.pressed and gui.pick_node(bgNode, D.currentMousePos.x, D.currentMousePos.y) and D.nodes["active"] == nil and not readonly then
 			D.nodes["active"] = node
 			D.nodes["tab"] = false
 			if D.isMobileDevice then
@@ -109,7 +122,7 @@ function M.textbox(self, action_id, action, node, enabled, tab_to)
 		D.nodes["tab"] = true
 	end
 
-	if D.nodes["active"] == node then
+	if D.nodes["active"] == node and not readonly then
 		local widthmod = window.get_size() / sys.get_config_int("display.width")
 		if action_id == hash("touch") and action.released and gui.pick_node(bgNode, action.x, action.y) then
 			gui.set_text(hiddenText, gui.get_text(textNode))
@@ -142,20 +155,21 @@ function M.textbox(self, action_id, action, node, enabled, tab_to)
 			gui.set_enabled(markerNode, true) -- Enable marker
 			D.pulsate(markerNode)
 			-- Input text
-		elseif action_id == hash("text") and gui.get_text_metrics_from_node(textNode).width < (gui.get_size(bgNode).x-25) then
+		elseif action_id == hash("text") and gui.get_text_metrics_from_node(textNode).width < (gui.get_size(bgNode).x-25)
+				and (maxlength == nil or utf8.len(gui.get_text(textNode)) < maxlength) then
 			if utf8.len(gui.get_text(hiddenText)) < utf8.len(gui.get_text(textNode)) then -- Hidden is shorter add text for that point
 				editLine(self, action, node, "text", false)
 			elseif utf8.len(gui.get_text(hiddenText)) == utf8.len(gui.get_text(textNode)) then -- If equal add text at the end
 				editLine(self, action, node, "text", true)
 			end
 		-- Erase using backspace
-		elseif action_id == hash("backspace") and action.repeated then -- Remove letters
+		elseif action_id == hash("backspace") and (action.pressed or action.repeated) then -- Remove letters
 			if utf8.len(gui.get_text(hiddenText)) < utf8.len(gui.get_text(textNode)) then -- If hidden is shorter remove text from that point
 				editLine(self, action, node, "backspace", false)
 			elseif utf8.len(gui.get_text(hiddenText)) == utf8.len(gui.get_text(textNode)) then -- If equal remove from the end
 				editLine(self, action, node, "backspace", true)
 			end
-		elseif action_id == hash("delete") and action.repeated then -- Same as above but delete
+		elseif action_id == hash("delete") and (action.pressed or action.repeated) then -- Same as above but delete
 			if utf8.len(gui.get_text(hiddenText)) < utf8.len(gui.get_text(textNode)) then
 				editLine(self, action, node, "del", false)
 			elseif utf8.len(gui.get_text(hiddenText)) == utf8.len(gui.get_text(textNode)) then -- If marker at end there is nothing to delete
@@ -178,7 +192,12 @@ function M.textbox(self, action_id, action, node, enabled, tab_to)
 		end
 		self.textboxData[node].text = gui.get_text(textNode)
 	end
-	return self.textboxData[node].text
+	local text = self.textboxData[node].text
+	local prev = self.textboxData[node].lastText
+	if prev == nil then prev = text end -- no spurious change on first frame
+	local changed = (text ~= prev)
+	self.textboxData[node].lastText = text
+	return text, changed
 end
 
 -- TEXTBOX MULTILINE
@@ -347,7 +366,7 @@ function M.textboxMultiline(self, action_id, action, node, enabled, tab_to)
 	self.textboxData[node].lines = self.textboxData[node].lines or {}
 	self.textboxData[node].sizeFix = self.textboxData[node].sizeFix or false
 	self.textboxData[node].scroll = self.textboxData[node].scroll or {}	
-	self.textboxData[node].enabled = self.textboxData[node].enabled or enabled
+	self.textboxData[node].enabled = enabled
 
 	sizeFix(self, node)
 
@@ -388,7 +407,6 @@ function M.textboxMultiline(self, action_id, action, node, enabled, tab_to)
 		gui.set_color(bgNode, D.colors.active)
 		gui.set_enabled(self.textboxData[node].lines[self.textboxData[node].activeline].marker, false)
 		D.nodes["tab"] = true
-		print("Tab presed")
 	end
 
 	if D.nodes["active"] == node then
@@ -505,7 +523,7 @@ function M.textboxMultiline(self, action_id, action, node, enabled, tab_to)
 		end
 
 		-- Delete
-		if action_id == hash("backspace") and action.repeated then -- Remove one letter
+		if action_id == hash("backspace") and (action.pressed or action.repeated) then -- Remove one letter
 			currentline = self.textboxData[node].lines[self.textboxData[node].activeline]
 			if utf8.len(gui.get_text(currentline.hidden)) == 0 and self.textboxData[node].activeline > 1 then -- If higher then first line
 				local text = gui.get_text(currentline.text)
@@ -552,7 +570,7 @@ function M.textboxMultiline(self, action_id, action, node, enabled, tab_to)
 				gui.set_position(currentline.marker, markerPos)
 			end
 		end
-		if action_id == hash("delete") and action.repeated then -- Same as above but delete
+		if action_id == hash("delete") and (action.pressed or action.repeated) then -- Same as above but delete
 			currentline = self.textboxData[node].lines[self.textboxData[node].activeline]
 			if utf8.len(gui.get_text(currentline.hidden)) < utf8.len(gui.get_text(currentline.text)) then
 				local hiddenlength = utf8.len(gui.get_text(currentline.hidden))
@@ -561,10 +579,8 @@ function M.textboxMultiline(self, action_id, action, node, enabled, tab_to)
 				gui.set_text(currentline.hidden, text)
 				text = text .. utf8.sub(gui.get_text(currentline.text), hiddenlength+2, -1)
 				gui.set_text(currentline.text, text)
-				markerPos.x = gui.get_text_metrics_from_node(hiddenText).width
+				markerPos.x = gui.get_text_metrics_from_node(currentline.hidden).width
 				gui.set_position(currentline.marker, markerPos)
-			elseif utf8.len(gui.get_text(currentline.hidden)) == utf8.len(gui.get_text(currentline.text)) <= #self.textboxData[node].lines then -- If marker at end there is nothing to delete
-				print("nothing to delete")
 			end
 		end
 
@@ -580,7 +596,7 @@ function M.textboxMultiline(self, action_id, action, node, enabled, tab_to)
 				D.stop_pulsate(currentline.marker)
 				self.textboxData[node].linecount = self.textboxData[node].linecount + 1
 				self.textboxData[node].activeline = self.textboxData[node].activeline + 1
-				table.insert(self.textboxData[node].lines, self.textboxData[node].activeline, addline(node, self.textboxData[node].linecount))
+				table.insert(self.textboxData[node].lines, self.textboxData[node].activeline, addLine(node, self.textboxData[node].linecount))
 				currentline = self.textboxData[node].lines[self.textboxData[node].activeline]
 				gui.set_text(currentline.text, textfornextline)
 				gui.set_text(currentline.hidden, "")
@@ -671,18 +687,29 @@ function M.textboxMultiline(self, action_id, action, node, enabled, tab_to)
 			returnstring = returnstring .. gui.get_text(self.textboxData[node].lines[i].text) .. "\n"
 		end
 	end
-	return returnstring
+	local prev = self.textboxData[node].lastText
+	if prev == nil then prev = returnstring end -- no spurious change on first frame
+	local changed = (returnstring ~= prev)
+	self.textboxData[node].lastText = returnstring
+	return returnstring, changed
 end
 
 -- OTHER
 function M.clearTextbox(self, node)
 	-- Clear textbox
 	local textNode = gui.get_node(node .. "/text")
+	local hiddenText = gui.get_node(node .. "/hiddentext")
+	local markerNode = gui.get_node(node .. "/marker")
 	self.textboxData = self.textboxData or {}
 	self.textboxData[node] = self.textboxData[node] or {}
-	self.textboxData[node].text = self.textboxData[node].text or ""
-	self.textboxData[node].text = ""
-	gui.set_text(textNode, self.textboxData[node].text)
+	self.textboxData[node].text     = ""
+	self.textboxData[node].lastText = ""  -- prevent spurious changed on next frame
+	gui.set_text(textNode, "")
+	gui.set_text(hiddenText, "")
+	-- Reset marker to the start position
+	local markerPos = gui.get_position(markerNode)
+	markerPos.x = 0
+	gui.set_position(markerNode, markerPos)
 end
 
 function M.setTextbox(self, node, text)
@@ -693,11 +720,162 @@ function M.setTextbox(self, node, text)
 	-- Check current value
 	self.textboxData = self.textboxData or {}
 	self.textboxData[node] = self.textboxData[node] or {}
-	self.textboxData[node].text = text
-	gui.set_text(textNode, self.textboxData[node].text)
-	gui.set_text(hiddenText, self.textboxData[node].text)	
+	self.textboxData[node].text     = text
+	self.textboxData[node].lastText = text  -- prevent spurious changed on next frame
+	gui.set_text(textNode, text)
+	gui.set_text(hiddenText, text)
 	gui.set_enabled(markerNode, false)
 end
 
+
+function M.clearTextboxMultiline(self, node)
+	local textNode   = gui.get_node(node .. "/text")
+	local hiddenText = gui.get_node(node .. "/hiddentext")
+	local markerNode = gui.get_node(node .. "/marker")
+	local carrier    = gui.get_node(node .. "/carrier")
+	local dragpos    = gui.get_node(node .. "/dragpos")
+
+	self.textboxData       = self.textboxData or {}
+	self.textboxData[node] = self.textboxData[node] or {}
+	local data             = self.textboxData[node]
+
+	-- Stop pulsate and delete all dynamic lines (index 2+)
+	if data.lines then
+		for i = #data.lines, 2, -1 do
+			D.stop_pulsate(data.lines[i].marker)
+			gui.set_enabled(data.lines[i].marker, false)
+			deleteLine(node, data.lines[i].id)
+		end
+	end
+
+	-- Reset template nodes
+	gui.set_text(textNode, "")
+	gui.set_text(hiddenText, "")
+	D.stop_pulsate(markerNode)
+	gui.set_enabled(markerNode, false)
+	local markerPos = gui.get_position(markerNode)
+	markerPos.x = 0
+	gui.set_position(markerNode, markerPos)
+
+	-- Reset carrier scroll position and hide scroll indicator
+	gui.set_position(carrier, vmath.vector3(0, 0, 0))
+	gui.set_visible(dragpos, false)
+
+	-- Reset state (preserve sizeFix so sizes are not re-applied unnecessarily)
+	data.lines      = {}
+	data.linecount  = 0
+	data.activeline = 0
+	data.text       = ""
+	data.lastText   = ""
+	data.scroll     = {}
+
+	-- Release focus if this node was active
+	if D.nodes["active"] == node then
+		D.nodes["active"] = nil
+	end
+end
+
+function M.setTextboxMultiline(self, node, text)
+	self.textboxData            = self.textboxData or {}
+	self.textboxData[node]      = self.textboxData[node] or {}
+	-- Bootstrap fields that sizeFix and addLine depend on
+	self.textboxData[node].text      = self.textboxData[node].text or ""
+	self.textboxData[node].linecount = self.textboxData[node].linecount or 0
+	self.textboxData[node].activeline= self.textboxData[node].activeline or 0
+	self.textboxData[node].lines     = self.textboxData[node].lines or {}
+	self.textboxData[node].sizeFix   = self.textboxData[node].sizeFix or false
+	self.textboxData[node].scroll    = self.textboxData[node].scroll or {}
+
+	-- Clear any existing content first
+	M.clearTextboxMultiline(self, node)
+
+	-- Ensure node sizes are applied (no-op if already done)
+	sizeFix(self, node)
+
+	-- Grab template nodes (only the first line uses the bare template IDs)
+	local textNode   = gui.get_node(node .. "/text")
+	local hiddenText = gui.get_node(node .. "/hiddentext")
+	local markerNode = gui.get_node(node .. "/marker")
+	local innerbox   = gui.get_node(node .. "/innerbox")
+
+	-- Split the text on newlines; always produce at least one entry
+	local lineTexts = {}
+	for line in (text .. "\n"):gmatch("([^\n]*)\n") do
+		table.insert(lineTexts, line)
+	end
+	if #lineTexts == 0 then lineTexts = {""} end
+
+	local data = self.textboxData[node]
+
+	-- Set up line 1 using the template nodes directly
+	data.linecount  = 1
+	data.activeline = 1
+	gui.set_text(textNode, lineTexts[1])
+	gui.set_text(hiddenText, lineTexts[1])
+	data.lines[1] = {text = textNode, hidden = hiddenText, marker = markerNode, innerbox = innerbox, id = 1}
+
+	-- Create additional lines via cloning
+	for i = 2, #lineTexts do
+		data.linecount = data.linecount + 1
+		local newline = addLine(node, data.linecount)
+		gui.set_text(newline.text, lineTexts[i])
+		gui.set_text(newline.hidden, lineTexts[i])
+		table.insert(data.lines, newline)
+	end
+
+	-- Reposition all lines and resize the carrier
+	sortLines(node, data.lines)
+
+	-- Persist the text value and prevent a spurious "changed" on the next frame
+	local fullText    = table.concat(lineTexts, "\n")
+	data.text         = fullText
+	data.lastText     = fullText
+end
+
+-- Efficiently append a single line of text to a multiline textbox.
+-- Unlike setTextboxMultiline, this does not clear existing content first.
+-- The widget must have been used (or sizeFix called) at least once before calling this.
+function M.appendLineTextboxMultiline(self, node, text)
+	self.textboxData            = self.textboxData or {}
+	self.textboxData[node]      = self.textboxData[node] or {}
+	local data                  = self.textboxData[node]
+	data.lines                  = data.lines or {}
+	data.linecount              = data.linecount or 0
+	data.sizeFix                = data.sizeFix or false
+	data.scroll                 = data.scroll or {}
+
+	-- Ensure sizes have been applied
+	sizeFix(self, node)
+
+	if #data.lines == 0 then
+		-- No lines yet — set up line 1 from the template nodes
+		local textNode   = gui.get_node(node .. "/text")
+		local hiddenText = gui.get_node(node .. "/hiddentext")
+		local markerNode = gui.get_node(node .. "/marker")
+		local innerbox   = gui.get_node(node .. "/innerbox")
+		data.linecount  = 1
+		data.activeline = 1
+		gui.set_text(textNode, text)
+		gui.set_text(hiddenText, text)
+		data.lines[1] = {text = textNode, hidden = hiddenText, marker = markerNode, innerbox = innerbox, id = 1}
+	else
+		-- Clone a new line after the last existing one
+		data.linecount = data.linecount + 1
+		local newline  = addLine(node, data.linecount)
+		gui.set_text(newline.text,   text)
+		gui.set_text(newline.hidden, text)
+		table.insert(data.lines, newline)
+	end
+
+	sortLines(node, data.lines)
+
+	-- Rebuild return string and prevent a spurious 'changed' on the next frame
+	local parts = {}
+	for i = 1, #data.lines do
+		parts[i] = gui.get_text(data.lines[i].text)
+	end
+	local fullText  = table.concat(parts, "\n") .. "\n"
+	data.lastText   = fullText
+end
 
 return M

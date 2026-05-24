@@ -14,8 +14,8 @@ high_dpi = 1
 
 [project]
 title = DD-GUI
-version = 0.3.8
-publisher = Skogsheden
+version = 0.4.0
+publisher = Skogsheden Radiologikonsult AB
 developer = Nils Gustafsson
 bundle_resources = /dd-gui/
 dependencies#0 = https://github.com/d954mas/defold-utf8/archive/master.zip

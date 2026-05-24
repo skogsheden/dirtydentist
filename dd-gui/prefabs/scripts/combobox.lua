@@ -3,10 +3,63 @@
 
 local M = {}
 
+-- ---------------------------------------------------------------------------
+-- Local helpers shared by combobox() and auto_suggestbox()
+-- ---------------------------------------------------------------------------
+
+-- Close an open dropdown and release focus.
+-- The caller is responsible for any extra cleanup (marker, keyboard, etc.).
+local function closeDropdown(self, node)
+	local mask          = gui.get_node(node .. "/bg")
+	local textbox       = gui.get_node(node .. "/textbox")
+	local selected_text = gui.get_node(node .. "/selecttext")
+	M.deleteCombobox(self, node)
+	gui.set_enabled(mask, false)
+	gui.set_text(selected_text, self.comboboxData[node].value)
+	gui.set_color(textbox, D.colors.active)
+	self.comboboxData[node].open = false
+	self.comboboxData[node].init = false
+	D.nodes["active"]   = nil
+	self.selectedNode   = nil
+end
+
+-- Build the three parallel ID-suffix lists used to iterate dropdown rows.
+-- Returns listOfButton, listOfText, listOfSelect (all empty if not ready).
+local function buildButtonLists(self, node)
+	local listOfButton, listOfText, listOfSelect = {}, {}, {}
+	if self.comboboxData[node].rebuilding_list then
+		return listOfButton, listOfText, listOfSelect
+	end
+	local count = self.comboboxData[node].count or 0
+	-- gui.get_node throws (not returns nil) when a node is missing, so use pcall.
+	local ok_base = pcall(gui.get_node, node .. "/button")
+	if not ok_base then
+		return listOfButton, listOfText, listOfSelect
+	end
+	listOfButton[1] = "/button"
+	listOfText[1]   = "/text"
+	listOfSelect[1] = "/selected"
+	for i = 1, count do
+		local ok_b = pcall(gui.get_node, node .. "/button"   .. i)
+		local ok_t = pcall(gui.get_node, node .. "/text"     .. i)
+		local ok_s = pcall(gui.get_node, node .. "/selected" .. i)
+		if ok_b and ok_t and ok_s then
+			listOfButton[i+1] = "/button"   .. i
+			listOfText[i+1]   = "/text"     .. i
+			listOfSelect[i+1] = "/selected" .. i
+		else
+			break
+		end
+	end
+	return listOfButton, listOfText, listOfSelect
+end
+
 function M.setValueCombobox(self, node, value)
+	self.comboboxData = self.comboboxData or {}
+	self.comboboxData[node] = self.comboboxData[node] or {}
 	self.comboboxData[node].value = value
 	local selected_text = gui.get_node(node .. "/selecttext")
-	gui.set_text(selected_text, value)
+	gui.set_text(selected_text, value or "")
 end
 
 function M.setValueAutobox(self, node, value, active)
@@ -63,64 +116,25 @@ function M.initialize(self, node, list, up, enabled)
 	self.comboboxData[node].initialize = true
 end
 
-function M.deleteCombobox(self,node)
-	-- Check if comboboxData exists for this node
-	if not self.comboboxData or not self.comboboxData[node] then
-		return
+function M.deleteCombobox(self, node)
+	if not self.comboboxData or not self.comboboxData[node] then return end
+	local count = self.comboboxData[node].count
+	if not count or count < 1 then return end
+
+	-- gui.get_node throws when a node is missing, so both get and delete must be
+	-- inside the same pcall so the error is fully contained.
+	for i = 1, count do
+		pcall(function() gui.delete_node(gui.get_node(node .. "/button"   .. i)) end)
+		pcall(function() gui.delete_node(gui.get_node(node .. "/text"     .. i)) end)
+		pcall(function() gui.delete_node(gui.get_node(node .. "/selected" .. i)) end)
 	end
-
-	-- Check if there's actually something to delete
-	if not self.comboboxData[node].count or self.comboboxData[node].count < 1 then
-		return
-	end
-
-	local dd_obj = gui.get_node(node .. "/dddrag")
-	if not dd_obj then
-		return
-	end
-
-	-- Safely delete each node with existence checks
-	for i = 1, self.comboboxData[node].count do
-		local buttonNode = gui.get_node(node .. "/button" .. i)
-		local textNode = gui.get_node(node .. "/text" .. i) 
-		local selectedNode = gui.get_node(node .. "/selected" .. i)
-
-		-- Only delete if nodes actually exist
-		if buttonNode then
-			local success = pcall(gui.delete_node, buttonNode)
-			if not success then
-				print("Failed to delete button node: " .. node .. "/button" .. i)
-			end
-		end
-
-		if textNode then
-			local success = pcall(gui.delete_node, textNode)
-			if not success then
-				print("Failed to delete text node: " .. node .. "/text" .. i)
-			end
-		end
-
-		if selectedNode then
-			local success = pcall(gui.delete_node, selectedNode)
-			if not success then
-				print("Failed to delete selected node: " .. node .. "/selected" .. i)
-			end
-		end
-	end
-
-	-- Reset position safely
-	local success = pcall(gui.set_position, dd_obj, vmath.vector3(0,0,0))
-	if not success then
-		print("Failed to reset dd_obj position for node: " .. node)
-	end
-
-	-- Reset count after successful deletion
+	pcall(function() gui.set_position(gui.get_node(node .. "/dddrag"), vmath.vector3(0, 0, 0)) end)
 	self.comboboxData[node].count = 0
 end
 
 function M.createComboboxList(self, node, list, use_mag)
 	if self.comboboxData[node].rebuilding_list then
-		return -- Avbryt om redan pågår
+		return -- Already rebuilding, skip
 	end
 	
 	-- setup nodes 	
@@ -143,9 +157,9 @@ function M.createComboboxList(self, node, list, use_mag)
 	gui.set_color(orginalnode,D.colors.active)
 
 	-- assign templet button first value or error message
-	if #list == 0 or #list == nil  then 
+	if #list == 0 then
 		gui.set_text(gui.get_node(node .. "/text"), D.no_entries)
-		self.comboboxData[node].rebuilding_list = false  -- Lägg till denna rad
+		self.comboboxData[node].rebuilding_list = false
 	else
 		-- Get values from list
 		self.comboboxData[node].size = #list * 30
@@ -168,40 +182,35 @@ function M.createComboboxList(self, node, list, use_mag)
 			gui.set_enabled(orginalselect, false)
 		end
 
-		-- fill up list
-		if #list > 1 then
-			for k in pairs (list) do
-				-- create new node
-				if k+1 <= #list then
-					local newnode = gui.clone(orginalnode)
-					local newtext = gui.clone(orginaltext)
-					local newselect = gui.clone(orginalselect)
+		-- fill up list (k is the list index of the first item, button index = k for button naming)
+		for k = 1, #list - 1 do
+			local newnode = gui.clone(orginalnode)
+			local newtext = gui.clone(orginaltext)
+			local newselect = gui.clone(orginalselect)
 
-					-- assagin to correct template
-					gui.set_parent(newtext, newnode)
-					gui.set_parent(newnode, dd_obj)	
-					gui.set_parent(newselect, newnode)	
-					gui.set_id(newnode, node .. "/button" .. k)
-					gui.set_id(newtext, node .. "/text" .. k)
-					gui.set_id(newselect, node .. "/selected" .. k)
+			-- assign to correct template
+			gui.set_parent(newtext, newnode)
+			gui.set_parent(newnode, dd_obj)
+			gui.set_parent(newselect, newnode)
+			gui.set_id(newnode, node .. "/button" .. k)
+			gui.set_id(newtext, node .. "/text" .. k)
+			gui.set_id(newselect, node .. "/selected" .. k)
 
-					--set text value, position and check if selected 
-					if list[k+1] == self.comboboxData[node].value then
-						gui.set_text(newtext, list[k+1])
-						gui.set_color(newnode, D.colors.hover)
-						gui.set_enabled(newselect, true)
-						if #list > 7 then
-							gui.set_position(dd_obj, vmath.vector3(0,D.valuelimit((k*30),0,(self.comboboxData[node].size-170)),0))
-						end
-					else
-						gui.set_text(newtext, list[k+1])
-						gui.set_color(newnode, D.colors.active)
-						gui.set_enabled(newselect, false)
-					end
-					gui.set_position(newnode, vmath.vector3(0,-30*k,0))
+			-- set text value, position and check if selected
+			if list[k+1] == self.comboboxData[node].value then
+				gui.set_text(newtext, list[k+1])
+				gui.set_color(newnode, D.colors.hover)
+				gui.set_enabled(newselect, true)
+				if #list > 7 then
+					gui.set_position(dd_obj, vmath.vector3(0, D.valuelimit((k*30), 0, (self.comboboxData[node].size-170)), 0))
 				end
+			else
+				gui.set_text(newtext, list[k+1])
+				gui.set_color(newnode, D.colors.active)
+				gui.set_enabled(newselect, false)
 			end
-		end	
+			gui.set_position(newnode, vmath.vector3(0, -30*k, 0))
+		end
 		self.comboboxData[node].rebuilding_list = false
 	end
 end
@@ -221,7 +230,10 @@ function M.combobox(self, action_id, action, node, list, enabled, up, use_mag, s
 	self.comboboxData = self.comboboxData or {}
 	self.comboboxData[node] = self.comboboxData[node] or {}
 	self.comboboxData[node].initialize = self.comboboxData[node].initialize or false
-	self.comboboxData[node].scroll = self.comboboxData[node].scroll or {}	
+	self.comboboxData[node].scroll = self.comboboxData[node].scroll or {}
+
+	-- Use a custom list override if one has been set via setListCombobox
+	local effectiveList = self.comboboxData[node].customList or list
 
 	if not self.comboboxData[node].initialize then
 		-- Load or initalize variables
@@ -231,7 +243,7 @@ function M.combobox(self, action_id, action, node, list, enabled, up, use_mag, s
 		self.comboboxData[node].init = self.comboboxData[node].init or false
 		self.comboboxData[node].previous = self.comboboxData[node].previous or 0
 		-- If list empty or has values
-		if #list == 0 then
+		if #effectiveList == 0 then
 			self.comboboxData[node].value = self.comboboxData[node].value or D.no_entries
 		else
 			self.comboboxData[node].value = self.comboboxData[node].value or D.select_a_value
@@ -255,7 +267,7 @@ function M.combobox(self, action_id, action, node, list, enabled, up, use_mag, s
 		gui.set_scale(selected_text, vmath.vector3(self.comboboxData[node].mag,self.comboboxData[node].mag,1))
 
 		-- Initalize dropdown
-		M.initialize(self, node, list, up, enabled)
+		M.initialize(self, node, effectiveList, up, enabled)
 
 		if standardValue == nil or standardValue == "" then
 			self.comboboxData[node].value = self.comboboxData[node].value
@@ -283,25 +295,12 @@ function M.combobox(self, action_id, action, node, list, enabled, up, use_mag, s
 					gui.set_text(selected_text, self.comboboxData[node].value)
 					self.comboboxData[node].open = true
 				elseif gui.pick_node(textbox, D.currentMousePos.x, D.currentMousePos.y) and self.comboboxData[node].open then
-					-- Close dropdown
-					gui.set_color(textbox, D.colors.active)
-					gui.set_enabled(mask, false)
-					gui.set_text(selected_text, self.comboboxData[node].value)
-					M.deleteCombobox(self, node)
-					self.comboboxData[node].init = false
-					self.comboboxData[node].open = false
-					D.nodes["active"], self.selectedNode = nil, nil
+					closeDropdown(self, node)
 				end
 			end
 		elseif not (gui.pick_node(mask, D.currentMousePos.x, D.currentMousePos.y) or gui.pick_node(textbox, D.currentMousePos.x, D.currentMousePos.y)) and enabled and self.selectedNode == node then
 			if action_id == hash("touch") and action.pressed then
-				gui.set_color(textbox, D.colors.active)
-				gui.set_enabled(mask, false)
-				gui.set_text(selected_text, self.comboboxData[node].value)
-				M.deleteCombobox(self, node)
-				self.comboboxData[node].init = false
-				self.comboboxData[node].open = false
-				D.nodes["active"], self.selectedNode = nil, nil
+				closeDropdown(self, node)
 			end
 		elseif not enabled then
 			gui.set_color(textbox, D.colors.inactive)
@@ -325,229 +324,180 @@ function M.combobox(self, action_id, action, node, list, enabled, up, use_mag, s
 
 		-- If boxes not created
 		if not self.comboboxData[node].init then
-			M.createComboboxList(self, node, list, use_mag)
+			M.createComboboxList(self, node, effectiveList, use_mag)
 			self.comboboxData[node].init = true
 		end
 
-		-- Add buttons to list (with safety checks)
-		local listOfButton = {}
-		local listOfText = {}
-		local listOfSelect = {}
-
-		-- Only build lists if nodes actually exist and we're not rebuilding
-		if not self.comboboxData[node].rebuilding_list and self.comboboxData[node].count and self.comboboxData[node].count > 0 then
-			-- Check if base button exists first
-			local baseButton = gui.get_node(node .. "/button")
-			if baseButton then
-				listOfButton[1] = "/button"
-				listOfText[1] = "/text" 
-				listOfSelect[1] = "/selected"
-
-				-- Only add additional buttons if they actually exist
-				for i = 1, self.comboboxData[node].count do
-					local buttonNode = gui.get_node(node .. "/button" .. i)
-					local textNode = gui.get_node(node .. "/text" .. i)
-					local selectedNode = gui.get_node(node .. "/selected" .. i)
-
-					if buttonNode and textNode and selectedNode then
-						listOfButton[i+1] = "/button" .. i
-						listOfText[i+1] = "/text" .. i
-						listOfSelect[i+1] = "/selected" .. i
-					else
-						-- If any node is missing, truncate the lists here
-						break
-					end
+		local listOfButton, listOfText, listOfSelect = buildButtonLists(self, node)
+		if #listOfButton > 0 then
+			-- Scroll: enabled when dropdown has more than 6 items
+			if self.comboboxData[node].count < 6 then
+				gui.set_enabled(dragpos, false)
+			else
+				gui.set_enabled(dragpos, true)
+				if action_id == hash("touch") and action.pressed then
+					self.comboboxData[node].scroll.active = true
+					self.comboboxData[node].scroll.pos = vmath.vector3(D.currentMousePos.x, D.currentMousePos.y, 0)
+				elseif action_id == hash("touch") and action.released then
+					self.comboboxData[node].scroll.active = false
+					self.comboboxData[node].scroll.pos = vmath.vector3(D.currentMousePos.x, D.currentMousePos.y, 0)
 				end
-			end
-		end
-
-		-- Only proceed with node operations if we have valid lists
-		if #listOfButton == 0 then
-			return self.comboboxData[node].value
-		end
-
-		-- Scrolling is enabeled when more than 7 items in dropdown
-		if self.comboboxData[node].count < 6 then
-			gui.set_enabled(dragpos, false)
-		elseif self.comboboxData[node].count >= 6 then
-			gui.set_enabled(dragpos, true)
-			if action_id == hash("touch") and action.pressed then
-				self.comboboxData[node].scroll.active = true
-				self.comboboxData[node].scroll.pos = vmath.vector3(D.currentMousePos.x, D.currentMousePos.y, 0)
-			elseif action_id == hash("touch") and action.released then
-				self.comboboxData[node].scroll.active = false
-				self.comboboxData[node].scroll.pos = vmath.vector3(D.currentMousePos.x, D.currentMousePos.y, 0)
-			end
-			if self.comboboxData[node].scroll.active then
+				if self.comboboxData[node].scroll.active then
+					local currentPos = gui.get_position(dd_obj)
+					self.comboboxData[node].scroll.delta = self.comboboxData[node].scroll.pos - vmath.vector3(D.currentMousePos.x, D.currentMousePos.y, 0)
+					self.comboboxData[node].scroll.pos = vmath.vector3(D.currentMousePos.x, D.currentMousePos.y, 0)
+					currentPos.y = D.valuelimit(currentPos.y - self.comboboxData[node].scroll.delta.y, 0, self.comboboxData[node].size - 170)
+					gui.set_position(dd_obj, currentPos)
+				elseif self.comboboxData[node].open and action_id == hash("wheelup") and gui.pick_node(dd_obj, D.currentMousePos.x, D.currentMousePos.y) then
+					local currentPos = gui.get_position(dd_obj)
+					currentPos.y = D.valuelimit(currentPos.y - D.scrollSpeed, 0, self.comboboxData[node].size - 170)
+					gui.set_position(dd_obj, currentPos)
+				elseif self.comboboxData[node].open and action_id == hash("wheeldown") and gui.pick_node(dd_obj, D.currentMousePos.x, D.currentMousePos.y) then
+					local currentPos = gui.get_position(dd_obj)
+					currentPos.y = D.valuelimit(currentPos.y + D.scrollSpeed, 0, self.comboboxData[node].size - 170)
+					gui.set_position(dd_obj, currentPos)
+				end
+				-- Sync scroll indicator
 				local currentPos = gui.get_position(dd_obj)
-				self.comboboxData[node].scroll.delta = self.comboboxData[node].scroll.pos - vmath.vector3(D.currentMousePos.x, D.currentMousePos.y, 0)
-				self.comboboxData[node].scroll.pos = vmath.vector3(D.currentMousePos.x, D.currentMousePos.y, 0)
-				currentPos.y =  D.valuelimit(currentPos.y - self.comboboxData[node].scroll.delta.y, 0,self.comboboxData[node].size -170)
-				gui.set_position(dd_obj, currentPos)
-				-- Scrollwheel
-			elseif self.comboboxData[node].open and action_id == hash("wheelup") and gui.pick_node(dd_obj, D.currentMousePos.x, D.currentMousePos.y) then
-				local currentPos = gui.get_position(dd_obj)
-				currentPos.y = D.valuelimit((currentPos.y - D.scrollSpeed),0,self.comboboxData[node].size -200)
-				gui.set_position(dd_obj, currentPos)
-			elseif self.comboboxData[node].open and action_id == hash("wheeldown") and gui.pick_node(dd_obj, D.currentMousePos.x, D.currentMousePos.y) then
-				local currentPos = gui.get_position(dd_obj)
-				currentPos.y = D.valuelimit((currentPos.y + D.scrollSpeed),0,self.comboboxData[node].size -170)
-				gui.set_position(dd_obj, currentPos)
+				local amountcomplete = currentPos.y / (self.comboboxData[node].size - 170)
+				local dragposCurrent = gui.get_position(dragpos)
+				dragposCurrent.y = D.valuelimit(-170 * amountcomplete, -gui.get_size(dd_obj).y, -10)
+				gui.set_position(dragpos, dragposCurrent)
 			end
 
-			-- move indicator
-			local currentPos = gui.get_position(dd_obj)
-			local amountcomplete = currentPos.y / (self.comboboxData[node].size -170)
-			local dragposCurrent = gui.get_position(dragpos)
-			dragposCurrent.y = D.valuelimit(-170 * amountcomplete, -gui.get_size(dd_obj).y, -10)
-			gui.set_position(dragpos, dragposCurrent)
-		end
-
-		-- find if any is selected (now safe because we've verified nodes exist)
-		self.comboboxData[node].previous = nil
-		for k in pairs (listOfButton) do
-			local success, color = pcall(gui.get_color, gui.get_node(node .. listOfButton[k]))
-			if success and color == D.colors.hover then
-				self.comboboxData[node].previous = k
-				break
-			end
-		end
-		if self.comboboxData[node].previous == nil then
-			for k in pairs (listOfButton) do
-				if gui.get_color(gui.get_node(node .. listOfButton[k])) == D.colors.select then
+			-- Track the hovered/selected row
+			self.comboboxData[node].previous = nil
+			for k in pairs(listOfButton) do
+				local ok, color = pcall(function() return gui.get_color(gui.get_node(node .. listOfButton[k])) end)
+				if ok and color == D.colors.hover then
 					self.comboboxData[node].previous = k
 					break
 				end
 			end
 			if self.comboboxData[node].previous == nil then
-				self.comboboxData[node].previous = 1
-				gui.set_color(gui.get_node(node .. listOfButton[self.comboboxData[node].previous]), D.colors.hover)
-			end
-		end
-		-- Move with keys
-		if action_id == hash("up") and action.pressed and self.comboboxData[node].count >= 1 and self.comboboxData[node].previous > 1 and self.comboboxData[node].open then
-			gui.set_color(gui.get_node(node .. listOfButton[self.comboboxData[node].previous-1]), D.colors.hover)
-			gui.set_color(gui.get_node(node .. listOfButton[self.comboboxData[node].previous]), D.colors.active)
-			if self.comboboxData[node].count > 6 then
-				gui.set_position(dd_obj, vmath.vector3(0,(self.comboboxData[node].previous-1)*30-30,0))
-			end
-		elseif action_id == hash("down") and action.pressed and self.comboboxData[node].count >= 1 and self.comboboxData[node].previous < #listOfButton and self.comboboxData[node].open then
-			gui.set_color(gui.get_node(node .. listOfButton[self.comboboxData[node].previous+1]), D.colors.hover)
-			gui.set_color(gui.get_node(node .. listOfButton[self.comboboxData[node].previous]), D.colors.active)
-			if self.comboboxData[node].count > 6 then
-				gui.set_position(dd_obj, vmath.vector3(0,(self.comboboxData[node].previous+1)*30-30,0))
-			end
-		end
-		--Select hovered button
-		if action_id == hash("enter") and action.pressed then
-			for k in pairs (listOfButton) do
-				if gui.get_color(gui.get_node(node .. listOfButton[k])) == D.colors.hover then
-					self.comboboxData[node].value = gui.get_text(gui.get_node(node .. listOfText[k]))
-					gui.set_text(selected_text, self.comboboxData[node].value)
-					gui.set_color(gui.get_node(node .. listOfButton[k]), D.colors.select)
-
-					-- Close dropdown
-					gui.set_enabled(mask, false) 
-					gui.set_text(selected_text, self.comboboxData[node].value)
-					self.comboboxData[node].open = false
-					M.deleteCombobox(self, node)
-					self.comboboxData[node].init = false
-					D.nodes["active"], self.selectedNode = nil, nil
-					gui.set_color(textbox, D.colors.active)
-					break
-				end
-			end	
-		end
-		-- Check if value pressed
-		if gui.pick_node(mask, D.currentMousePos.x, D.currentMousePos.y) then
-			for k in pairs (listOfButton) do
-				if action_id == hash("touch") and action.released and self.comboboxData[node].open and gui.pick_node(gui.get_node(node .. listOfButton[k]), D.currentMousePos.x, D.currentMousePos.y) then
-					if gui.get_text(gui.get_node(node .. listOfText[k])) ~= D.noentries then
-						self.comboboxData[node].value = gui.get_text(gui.get_node(node .. listOfText[k]))
-						gui.set_text(selected_text, self.comboboxData[node].value)
-						gui.set_color(gui.get_node(node .. listOfButton[k]), D.colors.hover)
-						gui.set_color(textbox, D.colors.active)
-						gui.set_enabled(mask, false)
-						gui.set_text(selected_text, self.comboboxData[node].value)
-						M.deleteCombobox(self, node)
-						self.comboboxData[node].init = false
-						self.comboboxData[node].open = false
-						D.nodes["active"], self.selectedNode = nil, nil
+				for k in pairs(listOfButton) do
+					local ok, color = pcall(function() return gui.get_color(gui.get_node(node .. listOfButton[k])) end)
+					if ok and color == D.colors.select then
+						self.comboboxData[node].previous = k
 						break
 					end
-				elseif self.comboboxData[node].open and gui.pick_node(gui.get_node(node .. listOfButton[k]), D.currentMousePos.x, D.currentMousePos.y) and self.comboboxData[node].value ~= gui.get_text(gui.get_node(node .. listOfText[k])) then
-					gui.set_color(gui.get_node(node .. listOfButton[k]), D.colors.hover)
-				elseif self.comboboxData[node].open and gui.pick_node(gui.get_node(node .. listOfButton[k]), D.currentMousePos.x, D.currentMousePos.y) and self.comboboxData[node].value == gui.get_text(gui.get_node(node .. listOfText[k])) then
-					gui.set_color(gui.get_node(node .. listOfButton[k]), D.colors.select)
-					gui.set_scale(gui.get_node(node .. listOfSelect[k]), vmath.vector3(1,0.75,1))
-				elseif self.comboboxData[node].open and not gui.pick_node(gui.get_node(node .. listOfButton[k]), D.currentMousePos.x, D.currentMousePos.y) and self.comboboxData[node].value == gui.get_text(gui.get_node(node .. listOfText[k])) then
-					gui.set_color(gui.get_node(node .. listOfButton[k]), D.colors.hover)
-					gui.set_scale(gui.get_node(node .. listOfSelect[k]), vmath.vector3(1,1,1))
-				elseif self.comboboxData[node].value ~= gui.get_text(gui.get_node(node .. listOfText[k])) and self.comboboxData[node].open then
-					gui.set_color(gui.get_node(node .. listOfButton[k]), D.colors.active)
 				end
-			end	
-		end
-	end
-	return self.comboboxData[node].value
+				if self.comboboxData[node].previous == nil then
+					self.comboboxData[node].previous = 1
+					pcall(function() gui.set_color(gui.get_node(node .. listOfButton[1]), D.colors.hover) end)
+				end
+			end
+
+			-- Keyboard navigation
+			local prev = self.comboboxData[node].previous
+			if action_id == hash("up") and action.pressed and prev and prev > 1 and self.comboboxData[node].open then
+				pcall(function() gui.set_color(gui.get_node(node .. listOfButton[prev - 1]), D.colors.hover) end)
+				pcall(function() gui.set_color(gui.get_node(node .. listOfButton[prev]),     D.colors.active) end)
+				if self.comboboxData[node].count > 6 then
+					gui.set_position(dd_obj, vmath.vector3(0, (prev - 1) * 30 - 30, 0))
+				end
+			elseif action_id == hash("down") and action.pressed and prev and prev < #listOfButton and self.comboboxData[node].open then
+				pcall(function() gui.set_color(gui.get_node(node .. listOfButton[prev + 1]), D.colors.hover) end)
+				pcall(function() gui.set_color(gui.get_node(node .. listOfButton[prev]),     D.colors.active) end)
+				if self.comboboxData[node].count > 6 then
+					gui.set_position(dd_obj, vmath.vector3(0, (prev + 1) * 30 - 30, 0))
+				end
+			end
+
+			-- Confirm selection with Enter
+			if action_id == hash("enter") and action.pressed then
+				for k in pairs(listOfButton) do
+					local ok_c, color = pcall(function() return gui.get_color(gui.get_node(node .. listOfButton[k])) end)
+					if ok_c and color == D.colors.hover then
+						local ok_t, txt = pcall(gui.get_node, node .. listOfText[k])
+						if ok_t then self.comboboxData[node].value = gui.get_text(txt) end
+						pcall(function() gui.set_color(gui.get_node(node .. listOfButton[k]), D.colors.select) end)
+						closeDropdown(self, node)
+						break
+					end
+				end
+			end
+
+			-- Confirm selection with touch / update hover highlight
+			if gui.pick_node(mask, D.currentMousePos.x, D.currentMousePos.y) then
+				for k in pairs(listOfButton) do
+					local ok_b, btn = pcall(gui.get_node, node .. listOfButton[k])
+					local ok_t, txt = pcall(gui.get_node, node .. listOfText[k])
+					local ok_s, sel = pcall(gui.get_node, node .. listOfSelect[k])
+					if not (ok_b and ok_t and ok_s) then break end
+					local hovered  = gui.pick_node(btn, D.currentMousePos.x, D.currentMousePos.y)
+					local itemText = gui.get_text(txt)
+					if action_id == hash("touch") and action.released and self.comboboxData[node].open and hovered then
+						if itemText ~= D.no_entries then
+							self.comboboxData[node].value = itemText
+							closeDropdown(self, node)
+							break
+						end
+					elseif self.comboboxData[node].open and hovered then
+						if self.comboboxData[node].value == itemText then
+							gui.set_color(btn, D.colors.select)
+							gui.set_scale(sel, vmath.vector3(1, 0.75, 1))
+						else
+							gui.set_color(btn, D.colors.hover)
+						end
+					elseif self.comboboxData[node].open and not hovered then
+						if self.comboboxData[node].value == itemText then
+							gui.set_color(btn, D.colors.hover)
+							gui.set_scale(sel, vmath.vector3(1, 1, 1))
+						else
+							gui.set_color(btn, D.colors.active)
+						end
+					end
+				end
+			end
+		end -- if #listOfButton > 0
+	end -- if D.nodes["active"] == node
+	local value = self.comboboxData[node].value
+	local prev = self.comboboxData[node].lastValue
+	if prev == nil then prev = value end -- no spurious change on first frame
+	local changed = (value ~= prev)
+	self.comboboxData[node].lastValue = value
+	return value, changed
 end
 
--- Förbättrad helper function för säker dropdown-uppdatering
+-- Rebuild the dropdown list filtered by currentText, keeping it open.
 local function updateDropdownSafe(self, node, list, currentText, use_mag)
-	-- Förhindra samtidiga uppdateringar
-	if self.comboboxData[node].updating_dropdown then
-		return false
-	end
-
+	if self.comboboxData[node].updating_dropdown then return false end
 	self.comboboxData[node].updating_dropdown = true
 
+	-- Filter the source list by the typed text (case-insensitive substring)
 	local foundInList = {}
-
-	-- Filtrera lista baserat på aktuell text
 	if currentText and utf8.len(currentText) > 0 then
-		local lowerCurrentText = utf8.lower(currentText)
+		local lower = utf8.lower(currentText)
 		for i = 1, #list do
-			if list[i] and utf8.find(utf8.lower(list[i]), lowerCurrentText, 1, true) ~= nil then
+			if list[i] and utf8.find(utf8.lower(list[i]), lower, 1, true) then
 				foundInList[#foundInList + 1] = list[i]
 			end
 		end
 	else
-		-- Visa alla alternativ om tom text
+		-- Empty search text — show all entries
 		for i = 1, #list do
-			if list[i] then
-				foundInList[#foundInList + 1] = list[i]
-			end
+			if list[i] then foundInList[#foundInList + 1] = list[i] end
 		end
 	end
 
-	-- Uppdatera dropdown säkert
-	local success = pcall(M.deleteCombobox, self, node)
-	if success then
-		self.comboboxData[node].count = math.max(0, #foundInList - 1)
-		if #foundInList > 0 then
-			success = pcall(M.createComboboxList, self, node, foundInList, use_mag)
-			if success then
-				local dd_obj = gui.get_node(node .. "/dddrag")
-				gui.set_position(dd_obj, vmath.vector3(0,0,0))
-				local mask = gui.get_node(node .. "/bg")
-				gui.set_enabled(mask, true)
-				self.comboboxData[node].open = true
-				self.comboboxData[node].init = true
+	-- Tear down old rows, rebuild with matches (or a "no entries" placeholder).
+	-- IMPORTANT: do NOT overwrite count before deleteCombobox runs — it reads the
+	-- current count to know which cloned nodes exist and need to be deleted.
+	-- createComboboxList sets count itself after creating the new nodes.
+	local displayList = #foundInList > 0 and foundInList or {D.no_entries}
+
+	local ok = pcall(M.deleteCombobox, self, node)
+	if ok then
+		ok = pcall(M.createComboboxList, self, node, displayList, use_mag)
+		if ok then
+			gui.set_position(gui.get_node(node .. "/dddrag"), vmath.vector3(0, 0, 0))
+			gui.set_enabled(gui.get_node(node .. "/bg"), true)
+			self.comboboxData[node].open = true
+			self.comboboxData[node].init = true
+			if #foundInList > 0 then
 				self.comboboxData[node].updating_dropdown = false
 				return true
-			end
-		else
-			-- Ingen matchning hittades - skapa tom lista men behåll dropdown öppen
-			self.comboboxData[node].count = 0
-			local emptyList = {D.no_entries or "No entries"}
-			success = pcall(M.createComboboxList, self, node, emptyList, use_mag)
-			if success then
-				local dd_obj = gui.get_node(node .. "/dddrag")
-				gui.set_position(dd_obj, vmath.vector3(0,0,0))
-				local mask = gui.get_node(node .. "/bg")
-				gui.set_enabled(mask, true)
-				self.comboboxData[node].open = true
-				self.comboboxData[node].init = true
 			end
 		end
 	end
@@ -556,139 +506,50 @@ local function updateDropdownSafe(self, node, list, currentText, use_mag)
 	return false
 end
 
--- Förbättrad helper function för säker dropdown-uppdatering
-local function updateDropdownSafe(self, node, list, currentText, use_mag)
-	-- Förhindra samtidiga uppdateringar
-	if self.comboboxData[node].updating_dropdown then
-		return false
-	end
-
-	self.comboboxData[node].updating_dropdown = true
-
-	local foundInList = {}
-
-	-- Filtrera lista baserat på aktuell text
-	if currentText and utf8.len(currentText) > 0 then
-		local lowerCurrentText = utf8.lower(currentText)
-		for i = 1, #list do
-			if list[i] and utf8.find(utf8.lower(list[i]), lowerCurrentText, 1, true) ~= nil then
-				foundInList[#foundInList + 1] = list[i]
-			end
-		end
-	else
-		-- Visa alla alternativ om tom text
-		for i = 1, #list do
-			if list[i] then
-				foundInList[#foundInList + 1] = list[i]
-			end
-		end
-	end
-
-	-- Uppdatera dropdown säkert
-	local success = pcall(M.deleteCombobox, self, node)
-	if success then
-		self.comboboxData[node].count = math.max(0, #foundInList - 1)
-		if #foundInList > 0 then
-			success = pcall(M.createComboboxList, self, node, foundInList, use_mag)
-			if success then
-				local dd_obj = gui.get_node(node .. "/dddrag")
-				gui.set_position(dd_obj, vmath.vector3(0,0,0))
-				local mask = gui.get_node(node .. "/bg")
-				gui.set_enabled(mask, true)
-				self.comboboxData[node].open = true
-				self.comboboxData[node].init = true
-				self.comboboxData[node].updating_dropdown = false
-				return true
-			end
-		else
-			-- Ingen matchning hittades - skapa tom lista men behåll dropdown öppen
-			self.comboboxData[node].count = 0
-			local emptyList = {D.no_entries or "No entries"}
-			success = pcall(M.createComboboxList, self, node, emptyList, use_mag)
-			if success then
-				local dd_obj = gui.get_node(node .. "/dddrag")
-				gui.set_position(dd_obj, vmath.vector3(0,0,0))
-				local mask = gui.get_node(node .. "/bg")
-				gui.set_enabled(mask, true)
-				self.comboboxData[node].open = true
-				self.comboboxData[node].init = true
-			end
-		end
-	end
-
-	self.comboboxData[node].updating_dropdown = false
-	return false
-end
-
--- Separat funktion för att hantera textuppdateringar
+-- Update the visible text and optionally the cursor marker position.
+-- Returns false if the new text is wider than the textbox allows.
 local function updateTextDisplay(self, node, newText, updateMarker)
 	local selected_text = gui.get_node(node .. "/selecttext")
-	local hiddenText = gui.get_node(node .. "/hiddentext")
-	local markerNode = gui.get_node(node .. "/marker")
-	local textbox = gui.get_node(node .. "/textbox")
+	local hiddenText    = gui.get_node(node .. "/hiddentext")
+	local markerNode    = gui.get_node(node .. "/marker")
+	local textbox       = gui.get_node(node .. "/textbox")
 
-	-- Kontrollera textbredd
+	-- Reject text that is too wide for the input field
 	gui.set_text(hiddenText, newText)
-	local success, metrics = pcall(gui.get_text_metrics_from_node, hiddenText)
-	local textWidth = 0
-	if success and metrics then
-		textWidth = metrics.width * (self.comboboxData[node].mag or 1)
-	end
+	local ok, metrics = pcall(gui.get_text_metrics_from_node, hiddenText)
+	local textWidth = (ok and metrics) and (metrics.width * (self.comboboxData[node].mag or 1)) or 0
+	local maxWidth  = gui.get_size(textbox).x - 25
+	if textWidth > maxWidth then return false end
 
-	local maxWidth = gui.get_size(textbox).x - 25
-	if textWidth > maxWidth then
-		return false -- Text för bred
-	end
-
-	-- Uppdatera text
 	gui.set_text(selected_text, newText)
 	self.comboboxData[node].value = newText
 
-	-- Uppdatera marker om begärt
 	if updateMarker then
 		local markerPos = gui.get_position(markerNode)
-		local hiddenTextContent = gui.get_text(hiddenText) or ""
-		local success, width = pcall(gui.get_text_metrics_from_node, hiddenText)
-		if success and width then
-			markerPos.x = math.min(math.max(-90, width.width * (self.comboboxData[node].mag or 1) - 90), maxWidth - 15)
-		else
-			markerPos.x = -90
-		end
+		local ok2, w = pcall(gui.get_text_metrics_from_node, hiddenText)
+		markerPos.x = ok2 and w and
+			math.min(math.max(-90, w.width * (self.comboboxData[node].mag or 1) - 90), maxWidth - 15)
+			or -90
 		gui.set_position(markerNode, markerPos)
 	end
 
 	return true
 end
 
--- Förbättrad funktion för att hantera lista-uppdateringar med smartare debouncing
+-- Debounced list update: cancels any pending timer and reschedules, so rapid
+-- keystrokes only trigger one rebuild once the user pauses for 150 ms.
 local function scheduleListUpdate(self, node, list, currentText, use_mag)
-	local currentTime = socket.gettime and socket.gettime() or os.time()
-
-	-- Spara pending uppdatering
 	self.comboboxData[node].pendingText = currentText
-	self.comboboxData[node].pendingUpdateTime = currentTime
 
-	-- Om det är första gången eller om mycket tid har gått, uppdatera direkt
-	if not self.comboboxData[node].lastUpdateTime or 
-	(currentTime - self.comboboxData[node].lastUpdateTime) > 1.0 then
-		updateDropdownSafe(self, node, list, currentText, use_mag)
-		self.comboboxData[node].lastUpdateTime = currentTime
-		self.comboboxData[node].pendingText = ""
-		return
-	end
-
-	-- Annars använd kortare debouncing för snabbare respons
+	-- Cancel any already-pending update
 	if self.comboboxData[node].updateTimer then
 		timer.cancel(self.comboboxData[node].updateTimer)
+		self.comboboxData[node].updateTimer = nil
 	end
 
-	self.comboboxData[node].updateTimer = timer.delay(0.20, false, function()
-		-- Kontrollera om vi fortfarande ska uppdatera
-		if self.comboboxData[node].pendingText and 
-		self.comboboxData[node].open then
-
-			updateDropdownSafe(self, node, list, self.comboboxData[node].pendingText, use_mag)
-			self.comboboxData[node].lastUpdateTime = socket.gettime and socket.gettime() or os.time()
+	self.comboboxData[node].updateTimer = timer.delay(0.15, false, function()
+		if self.comboboxData[node].open then
+			updateDropdownSafe(self, node, list, self.comboboxData[node].pendingText or "", use_mag)
 			self.comboboxData[node].pendingText = ""
 		end
 		self.comboboxData[node].updateTimer = nil
@@ -715,7 +576,10 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 	self.comboboxData[node].initialize = self.comboboxData[node].initialize or false
 	self.comboboxData[node].scroll = self.comboboxData[node].scroll or {}
 
-	-- Nya variabler för separerad hantering
+	-- Use a custom list override if one has been set via setListAutobox
+	local effectiveList = self.comboboxData[node].customList or list
+
+	-- Variables for separated dropdown update handling
 	self.comboboxData[node].updating_dropdown = self.comboboxData[node].updating_dropdown or false
 	self.comboboxData[node].updateScheduled = self.comboboxData[node].updateScheduled or false
 	self.comboboxData[node].pendingText = self.comboboxData[node].pendingText or ""
@@ -730,7 +594,7 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 		self.comboboxData[node].previous = self.comboboxData[node].previous or 0
 		self.comboboxData[node].scrolling = self.comboboxData[node].scrolling or false
 		-- If list empty or has values
-		if #list == 0 then
+		if #effectiveList == 0 then
 			self.comboboxData[node].value = self.comboboxData[node].value or D.no_entries
 		else
 			self.comboboxData[node].value = self.comboboxData[node].value or D.select_a_value
@@ -758,7 +622,7 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 		gui.set_scale(hiddenText, vmath.vector3(self.comboboxData[node].mag,self.comboboxData[node].mag,1))
 
 		-- Initalize dropdown
-		M.initialize(self, node, list, up, enabled)
+		M.initialize(self, node, effectiveList, up, enabled)
 	end
 
 	if self.comboboxData[node].value == "" and self.selectedNode ~= node then
@@ -781,8 +645,8 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 					D.nodes["active"], self.selectedNode = node, node
 					gui.set_enabled(mask, true)
 					gui.set_text(selected_text, self.comboboxData[node].value)
-					-- Skapa initial lista utan text-filtrering
-					updateDropdownSafe(self, node, list, "", use_mag)
+					-- Build initial list without text-filtering
+					updateDropdownSafe(self, node, effectiveList, "", use_mag)
 					if D.isMobileDevice then
 						gui.show_keyboard(gui.KEYBOARD_TYPE_DEFAULT, true)
 					end
@@ -853,7 +717,6 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 		D.nodes["tab"] = true
 	end
 	if D.nodes["tab"] == true and D.nodes["active"] == node and enabled == false then
-		print("jump to next")
 		M.deleteCombobox(self, node)
 		D.nodes["active"], self.selectedNode = nil, nil
 		D.nodes["active"] = tab_to
@@ -866,7 +729,7 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 		local dd_obj = gui.get_node(node .. "/dddrag")
 
 		-- Calculate width modifier
-		widthmod = window.get_size()/sys.get_config_int("display.width")
+		local widthmod = window.get_size()/sys.get_config_int("display.width")
 
 		-- active textinput
 		if action_id == hash("touch") and action.pressed and gui.pick_node(selected_text, D.currentMousePos.x, D.currentMousePos.y) then
@@ -880,12 +743,12 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 			end
 			gui.set_text(hiddenText, gui.get_text(selected_text))
 
-			-- Set marker med säkrare beräkning
+			-- Set cursor to click position
 			gui.set_screen_position(markerNode, vmath.vector3(D.currentMousePos.x*widthmod,D.currentMousePos.y,0)) 
 			local markpos = gui.get_position(markerNode)
 			markpos.y = 0 
 
-			-- SÄKRARE TEXTBERÄKNING
+			-- Walk back hidden text until it fits within the click position
 			local hiddenTextContent = gui.get_text(hiddenText) or ""
 			while utf8.len(hiddenTextContent) > 0 do
 				local textWidth = 0
@@ -908,7 +771,7 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 				hiddenTextContent = shortenstring
 			end
 
-			-- Uppdatera marker position säkert
+			-- Snap marker to end of trimmed hidden text
 			local success, width = pcall(gui.get_text_metrics_from_node, hiddenText)
 			if success and width then
 				markpos.x = math.max(-90, width.width * self.comboboxData[node].mag - 90)
@@ -922,8 +785,8 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 		if D.nodes["tab"] then 
 			gui.set_enabled(mask, true)
 			gui.set_text(selected_text, self.comboboxData[node].value)
-			-- Använd nya updateDropdownSafe funktionen
-			updateDropdownSafe(self, node, list, self.comboboxData[node].value or "", use_mag)
+			-- Open dropdown showing current text's matches
+			updateDropdownSafe(self, node, effectiveList, self.comboboxData[node].value or "", use_mag)
 			gui.set_enabled(markerNode, true)
 			D.pulsate(markerNode)
 
@@ -934,7 +797,7 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 			end
 			gui.set_text(hiddenText, gui.get_text(selected_text))
 
-			-- Säkrare markerposition
+			-- Set cursor to end of current text
 			gui.set_screen_position(markerNode, vmath.vector3((gui.get_position(textbox).x + gui.get_size(textbox).x)*widthmod,gui.get_position(textbox).y,0)) 
 			local markpos = gui.get_position(markerNode)
 			markpos.y = 0 
@@ -965,7 +828,7 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 			D.nodes["tab"] = false
 		end
 
-		-- Piltangenter
+		-- Arrow key cursor movement
 		if action_id == hash("left") and action.pressed then
 			local hiddenTextContent = gui.get_text(hiddenText) or ""
 			if utf8.len(hiddenTextContent) > 0 then
@@ -1001,28 +864,24 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 			end
 		end
 
-		-- Textinmatning med korrekt markörhantering
+		-- Text input with correct cursor handling
 		if action_id == hash("text") then
 			local hiddenTextContent = gui.get_text(hiddenText) or ""
 			local selectedTextContent = gui.get_text(selected_text) or ""
 			local cursorPos = utf8.len(hiddenTextContent)
 
-			-- Bygg ny text utifrån cursor
+			-- Build new text around cursor position
 			local before = hiddenTextContent
-			local after = ""
-			if cursorPos < utf8.len(selectedTextContent) then
-				after = utf8.sub(selectedTextContent, cursorPos + 1, -1)
-			end
-
+			local after  = cursorPos < utf8.len(selectedTextContent) and
+				utf8.sub(selectedTextContent, cursorPos + 1, -1) or ""
 			local newHiddenText = before .. action.text
-			local newText = newHiddenText .. after
+			local newText       = newHiddenText .. after
 
-			-- Uppdatera hiddenText och visad text
-			gui.set_text(hiddenText, newHiddenText)
+			gui.set_text(hiddenText,    newHiddenText)
 			gui.set_text(selected_text, newText)
 			self.comboboxData[node].value = newText
 
-			-- Flytta markören efter det insatta tecknet
+			-- Advance cursor past the inserted character
 			local markerPos = gui.get_position(markerNode)
 			local success, width = pcall(gui.get_text_metrics_from_node, hiddenText)
 			if success and width then
@@ -1032,57 +891,48 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 			end
 			gui.set_position(markerNode, markerPos)
 
-			-- Schemalägg lista-uppdatering separat
-			scheduleListUpdate(self, node, list, newText, use_mag)
+			scheduleListUpdate(self, node, effectiveList, newText, use_mag)
 		end
-		
 
-		-- Backspace som alltid raderar före markören
-		if action_id == hash("backspace") and action.repeated then
+		-- Backspace: always deletes the character before the cursor
+		if action_id == hash("backspace") and (action.pressed or action.repeated) then
 			local hiddenTextContent = gui.get_text(hiddenText) or ""
 			local selectedTextContent = gui.get_text(selected_text) or ""
 
-			-- Skydd mot specialfall
-			if selectedTextContent == "" or 
-			selectedTextContent == D.select_a_value or 
-			selectedTextContent == D.no_entries then
-				return self.comboboxData[node].value
-			end
+			local isPlaceholder = selectedTextContent == "" or
+				selectedTextContent == D.select_a_value or
+				selectedTextContent == D.no_entries
 
-			-- Markörposition = längden av hiddenText
-			local cursorPos = utf8.len(hiddenTextContent)
+			if not isPlaceholder then
+				local cursorPos = utf8.len(hiddenTextContent)
+				if cursorPos > 0 then
+					-- Remove the character before the cursor
+					local before = utf8.sub(hiddenTextContent, 1, cursorPos - 1)
+					local after  = utf8.sub(selectedTextContent, cursorPos + 1, -1)
+					local newHiddenText = before
+					local newText = before .. after
 
-			if cursorPos > 0 then
-				-- Ta bort tecknet före markören
-				local before = utf8.sub(hiddenTextContent, 1, cursorPos - 1)
-				local after  = utf8.sub(selectedTextContent, cursorPos + 1, -1)
-				local newHiddenText = before
-				local newText = before .. after
+					gui.set_text(hiddenText, newHiddenText)
+					gui.set_text(selected_text, newText)
+					self.comboboxData[node].value = newText
 
-				gui.set_text(hiddenText, newHiddenText)
-				gui.set_text(selected_text, newText)
-				self.comboboxData[node].value = newText
+					local markerPos = gui.get_position(markerNode)
+					local success, width = pcall(gui.get_text_metrics_from_node, hiddenText)
+					if success and width then
+						markerPos.x = math.max(-90, width.width * (self.comboboxData[node].mag or 1) - 90)
+					else
+						markerPos.x = -90
+					end
+					gui.set_position(markerNode, markerPos)
 
-				-- Flytta markören
-				local markerPos = gui.get_position(markerNode)
-				local success, width = pcall(gui.get_text_metrics_from_node, hiddenText)
-				if success and width then
-					markerPos.x = math.max(-90, width.width * (self.comboboxData[node].mag or 1) - 90)
-				else
-					markerPos.x = -90
+					scheduleListUpdate(self, node, effectiveList, newText, use_mag)
 				end
-				gui.set_position(markerNode, markerPos)
-
-				scheduleListUpdate(self, node, list, newText, use_mag)
-
-				-- Om markören står i början → gör ingenting
-			elseif cursorPos == 0 then
-				return self.comboboxData[node].value
+				-- cursorPos == 0: nothing to delete, fall through
 			end
 		end
-		
-		-- Delete hantering
-		if action_id == hash("delete") and action.repeated then
+
+		-- Delete: removes the character after the cursor
+		if action_id == hash("delete") and (action.pressed or action.repeated) then
 			local hiddenTextContent = gui.get_text(hiddenText) or ""
 			local selectedTextContent = gui.get_text(selected_text) or ""
 
@@ -1103,55 +953,16 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 				end
 				gui.set_position(markerNode, markerPos)
 
-				-- Schemalägg lista-uppdatering separat
-				scheduleListUpdate(self, node, list, text, use_mag)
-			elseif utf8.len(hiddenTextContent) == utf8.len(selectedTextContent) then
-				print("nothing to delete")
+				scheduleListUpdate(self, node, effectiveList, text, use_mag)
 			end
 		end
 
-		-- Add buttons to list med säkerhetskontroller
-		local listOfButton = {}
-		local listOfText = {}
-		local listOfSelect = {}
-
-		-- Only build lists if nodes actually exist and we're not rebuilding
-		if not self.comboboxData[node].updating_dropdown and 
-		not self.comboboxData[node].rebuilding_list and 
-		self.comboboxData[node].count and 
-		self.comboboxData[node].count >= 0 then
-
-			-- Check if base button exists first
-			local baseButton = gui.get_node(node .. "/button")
-			if baseButton then
-				listOfButton[1] = "/button"
-				listOfText[1] = "/text" 
-				listOfSelect[1] = "/selected"
-
-				-- Only add additional buttons if they actually exist
-				for i = 1, self.comboboxData[node].count do
-					local buttonNode = gui.get_node(node .. "/button" .. i)
-					local textNode = gui.get_node(node .. "/text" .. i)
-					local selectedNode = gui.get_node(node .. "/selected" .. i)
-
-					if buttonNode and textNode and selectedNode then
-						listOfButton[i+1] = "/button" .. i
-						listOfText[i+1] = "/text" .. i
-						listOfSelect[i+1] = "/selected" .. i
-					else
-						-- If any node is missing, truncate the lists here
-						break
-					end
-				end
-			end
-		end
-
-		-- Only proceed with node operations if we have valid lists
+		local listOfButton, listOfText, listOfSelect = buildButtonLists(self, node)
 		if #listOfButton > 0 then
-			-- Scrolling is enabled when more than 6 items in dropdown
+			-- Scroll: enabled when dropdown has more than 6 items
 			if self.comboboxData[node].count < 6 then
 				gui.set_enabled(dragpos, false)
-			elseif self.comboboxData[node].count >= 6 then
+			else
 				gui.set_enabled(dragpos, true)
 				if action_id == hash("touch") and action.pressed then
 					self.comboboxData[node].scroll.active = true
@@ -1164,145 +975,252 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 					local currentPos = gui.get_position(dd_obj)
 					self.comboboxData[node].scroll.delta = self.comboboxData[node].scroll.pos - vmath.vector3(D.currentMousePos.x, D.currentMousePos.y, 0)
 					self.comboboxData[node].scroll.pos = vmath.vector3(D.currentMousePos.x, D.currentMousePos.y, 0)
-					currentPos.y =  D.valuelimit(currentPos.y - self.comboboxData[node].scroll.delta.y, 0,self.comboboxData[node].size -170)
+					currentPos.y = D.valuelimit(currentPos.y - self.comboboxData[node].scroll.delta.y, 0, self.comboboxData[node].size - 170)
 					gui.set_position(dd_obj, currentPos)
 				elseif self.comboboxData[node].open and action_id == hash("wheelup") and gui.pick_node(dd_obj, D.currentMousePos.x, D.currentMousePos.y) then
 					local currentPos = gui.get_position(dd_obj)
-					currentPos.y = D.valuelimit((currentPos.y - D.scrollSpeed),0,self.comboboxData[node].size -200)
+					currentPos.y = D.valuelimit(currentPos.y - D.scrollSpeed, 0, self.comboboxData[node].size - 170)
 					gui.set_position(dd_obj, currentPos)
 				elseif self.comboboxData[node].open and action_id == hash("wheeldown") and gui.pick_node(dd_obj, D.currentMousePos.x, D.currentMousePos.y) then
 					local currentPos = gui.get_position(dd_obj)
-					currentPos.y = D.valuelimit((currentPos.y + D.scrollSpeed),0,self.comboboxData[node].size -170)
+					currentPos.y = D.valuelimit(currentPos.y + D.scrollSpeed, 0, self.comboboxData[node].size - 170)
 					gui.set_position(dd_obj, currentPos)
 				end
-
-				-- move indicator
+				-- Sync scroll indicator
 				local currentPos = gui.get_position(dd_obj)
-				local amountcomplete = currentPos.y / (self.comboboxData[node].size -170)
+				local amountcomplete = currentPos.y / (self.comboboxData[node].size - 170)
 				local dragposCurrent = gui.get_position(dragpos)
 				dragposCurrent.y = D.valuelimit(-170 * amountcomplete, -gui.get_size(dd_obj).y, -10)
 				gui.set_position(dragpos, dragposCurrent)
 			end
 
-			-- find if any is selected (now safe because we've verified nodes exist)
+			-- Track hovered/selected row
 			self.comboboxData[node].previous = nil
-			for k in pairs (listOfButton) do
-				local success, color = pcall(gui.get_color, gui.get_node(node .. listOfButton[k]))
-				if success and color == D.colors.hover then
+			for k in pairs(listOfButton) do
+				local ok, color = pcall(function() return gui.get_color(gui.get_node(node .. listOfButton[k])) end)
+				if ok and color == D.colors.hover then
 					self.comboboxData[node].previous = k
 					break
 				end
 			end
 			if self.comboboxData[node].previous == nil then
-				for k in pairs (listOfButton) do
-					local success, color = pcall(gui.get_color, gui.get_node(node .. listOfButton[k]))
-					if success and color == D.colors.select then
+				for k in pairs(listOfButton) do
+					local ok, color = pcall(function() return gui.get_color(gui.get_node(node .. listOfButton[k])) end)
+					if ok and color == D.colors.select then
 						self.comboboxData[node].previous = k
 						break
 					end
 				end
-				if self.comboboxData[node].previous == nil and #listOfButton > 0 then
+				if self.comboboxData[node].previous == nil then
 					self.comboboxData[node].previous = 1
-					local success = pcall(gui.set_color, gui.get_node(node .. listOfButton[self.comboboxData[node].previous]), D.colors.hover)
-					if not success then
-						print("Warning: Failed to set button color")
-					end
+					pcall(function() gui.set_color(gui.get_node(node .. listOfButton[1]), D.colors.hover) end)
 				end
 			end
 
-			-- Move with keys
-			if action_id == hash("up") and action.pressed and self.comboboxData[node].count >= 1 and self.comboboxData[node].previous and self.comboboxData[node].previous > 1 and self.comboboxData[node].open then
-				pcall(gui.set_color, gui.get_node(node .. listOfButton[self.comboboxData[node].previous-1]), D.colors.hover)
-				pcall(gui.set_color, gui.get_node(node .. listOfButton[self.comboboxData[node].previous]), D.colors.active)
+			-- Keyboard navigation
+			local prev = self.comboboxData[node].previous
+			if action_id == hash("up") and action.pressed and prev and prev > 1 and self.comboboxData[node].open then
+				pcall(function() gui.set_color(gui.get_node(node .. listOfButton[prev - 1]), D.colors.hover) end)
+				pcall(function() gui.set_color(gui.get_node(node .. listOfButton[prev]),     D.colors.active) end)
 				if self.comboboxData[node].count > 6 then
-					gui.set_position(dd_obj, vmath.vector3(0,(self.comboboxData[node].previous-1)*30-30,0))
+					gui.set_position(dd_obj, vmath.vector3(0, (prev - 1) * 30 - 30, 0))
 				end
-			elseif action_id == hash("down") and action.pressed and self.comboboxData[node].count >= 1 and self.comboboxData[node].previous and self.comboboxData[node].previous < #listOfButton and self.comboboxData[node].open then
-				pcall(gui.set_color, gui.get_node(node .. listOfButton[self.comboboxData[node].previous+1]), D.colors.hover)
-				pcall(gui.set_color, gui.get_node(node .. listOfButton[self.comboboxData[node].previous]), D.colors.active)
+			elseif action_id == hash("down") and action.pressed and prev and prev < #listOfButton and self.comboboxData[node].open then
+				pcall(function() gui.set_color(gui.get_node(node .. listOfButton[prev + 1]), D.colors.hover) end)
+				pcall(function() gui.set_color(gui.get_node(node .. listOfButton[prev]),     D.colors.active) end)
 				if self.comboboxData[node].count > 6 then
-					gui.set_position(dd_obj, vmath.vector3(0,(self.comboboxData[node].previous+1)*30-30,0))
+					gui.set_position(dd_obj, vmath.vector3(0, (prev + 1) * 30 - 30, 0))
 				end
 			end
 
-			--Select hovered button
+			-- Confirm selection with Enter
 			if action_id == hash("enter") and action.pressed then
-				for k in pairs (listOfButton) do
-					local success, color = pcall(gui.get_color, gui.get_node(node .. listOfButton[k]))
-					if success and color == D.colors.hover then
-						local textSuccess, textValue = pcall(gui.get_text, gui.get_node(node .. listOfText[k]))
-						if textSuccess and textValue then
-							self.comboboxData[node].value = textValue
-							gui.set_text(selected_text, textValue)
-							pcall(gui.set_color, gui.get_node(node .. listOfButton[k]), D.colors.select)
-
-							-- Close dropdown
-							gui.set_enabled(mask, false) 
-							gui.set_text(selected_text, textValue)
-							self.comboboxData[node].open = false
-							M.deleteCombobox(self, node)
-							self.comboboxData[node].init = false
-							D.nodes["active"], self.selectedNode = nil, nil
-							gui.set_color(textbox, D.colors.active)
-							gui.set_enabled(markerNode, false)
-							D.stop_pulsate(markerNode)
-							break
-						end
+				for k in pairs(listOfButton) do
+					local ok, color = pcall(function() return gui.get_color(gui.get_node(node .. listOfButton[k])) end)
+					if ok and color == D.colors.hover then
+						local ok_t, txtNode = pcall(gui.get_node, node .. listOfText[k])
+						if ok_t then self.comboboxData[node].value = gui.get_text(txtNode) end
+						closeDropdown(self, node)
+						D.stop_pulsate(markerNode)
+						gui.set_enabled(markerNode, false)
+						break
 					end
 				end
 				if D.isMobileDevice then
 					gui.reset_keyboard()
 					gui.hide_keyboard()
-				end	
+				end
 			end
 
-			-- Check if value pressed
+			-- Confirm selection with touch / update hover highlight
 			if gui.pick_node(mask, D.currentMousePos.x, D.currentMousePos.y) then
-				for k in pairs (listOfButton) do
-					local buttonNode = gui.get_node(node .. listOfButton[k])
-					local textNode = gui.get_node(node .. listOfText[k])
-					local selectNode = gui.get_node(node .. listOfSelect[k])
-
-					if buttonNode and textNode and selectNode then
-						if action_id == hash("touch") and action.released and self.comboboxData[node].open and gui.pick_node(buttonNode, D.currentMousePos.x, D.currentMousePos.y) then
-							local textValue = gui.get_text(textNode)
-							if textValue ~= D.noentries then
-								self.comboboxData[node].value = textValue
-								gui.set_text(selected_text, textValue)
-								gui.set_color(buttonNode, D.colors.hover)
-								gui.set_color(textbox, D.colors.active)
-								gui.set_enabled(mask, false)
-								gui.set_text(selected_text, textValue)
-								M.deleteCombobox(self, node)
-								self.comboboxData[node].init = false
-								self.comboboxData[node].open = false
-								D.nodes["active"], self.selectedNode = nil, nil
-								gui.set_enabled(markerNode, false)
-								D.stop_pulsate(markerNode)
-								if D.isMobileDevice then
-									gui.reset_keyboard()
-									gui.hide_keyboard()
-								end
-								break
+				for k in pairs(listOfButton) do
+					local ok_b, btn = pcall(gui.get_node, node .. listOfButton[k])
+					local ok_t, txt = pcall(gui.get_node, node .. listOfText[k])
+					local ok_s, sel = pcall(gui.get_node, node .. listOfSelect[k])
+					if not (ok_b and ok_t and ok_s) then break end
+					local hovered  = gui.pick_node(btn, D.currentMousePos.x, D.currentMousePos.y)
+					local itemText = gui.get_text(txt)
+					if action_id == hash("touch") and action.released and self.comboboxData[node].open and hovered then
+						if itemText ~= D.no_entries then
+							self.comboboxData[node].value = itemText
+							closeDropdown(self, node)
+							D.stop_pulsate(markerNode)
+							gui.set_enabled(markerNode, false)
+							if D.isMobileDevice then
+								gui.reset_keyboard()
+								gui.hide_keyboard()
 							end
-						elseif self.comboboxData[node].open and gui.pick_node(buttonNode, D.currentMousePos.x, D.currentMousePos.y) and self.comboboxData[node].value ~= gui.get_text(textNode) then
-							gui.set_color(buttonNode, D.colors.hover)
-						elseif self.comboboxData[node].open and gui.pick_node(buttonNode, D.currentMousePos.x, D.currentMousePos.y) and self.comboboxData[node].value == gui.get_text(textNode) then
-							gui.set_color(buttonNode, D.colors.select)
-							gui.set_scale(selectNode, vmath.vector3(1,0.75,1))
-						elseif self.comboboxData[node].open and not gui.pick_node(buttonNode, D.currentMousePos.x, D.currentMousePos.y) and self.comboboxData[node].value == gui.get_text(textNode) then
-							gui.set_color(buttonNode, D.colors.hover)
-							gui.set_scale(selectNode, vmath.vector3(1,1,1))
-						elseif self.comboboxData[node].value ~= gui.get_text(textNode) and self.comboboxData[node].open then
-							gui.set_color(buttonNode, D.colors.active)
+							break
+						end
+					elseif self.comboboxData[node].open and hovered then
+						if self.comboboxData[node].value == itemText then
+							gui.set_color(btn, D.colors.select)
+							gui.set_scale(sel, vmath.vector3(1, 0.75, 1))
+						else
+							gui.set_color(btn, D.colors.hover)
+						end
+					elseif self.comboboxData[node].open and not hovered then
+						if self.comboboxData[node].value == itemText then
+							gui.set_color(btn, D.colors.hover)
+							gui.set_scale(sel, vmath.vector3(1, 1, 1))
+						else
+							gui.set_color(btn, D.colors.active)
 						end
 					end
-				end	
+				end
 			end
-		end
+		end -- if #listOfButton > 0
+	end -- if D.nodes["active"] == node
+
+	local value = self.comboboxData[node].value
+	local prev = self.comboboxData[node].lastValue
+	if prev == nil then prev = value end -- no spurious change on first frame
+	local changed = (value ~= prev)
+	self.comboboxData[node].lastValue = value
+	return value, changed
+end
+
+-- Reset a standard combobox to its unselected placeholder state.
+-- Closes the dropdown if it is open and clears the stored value.
+function M.clearCombobox(self, node)
+	self.comboboxData       = self.comboboxData or {}
+	self.comboboxData[node] = self.comboboxData[node] or {}
+	local data              = self.comboboxData[node]
+
+	local textbox       = gui.get_node(node .. "/textbox")
+	local selected_text = gui.get_node(node .. "/selecttext")
+	local mask          = gui.get_node(node .. "/bg")
+	local arrow         = gui.get_node(node .. "/arrow")
+
+	-- Close dropdown if currently open
+	if data.open then
+		M.deleteCombobox(self, node)
+		gui.set_enabled(mask, false)
+		data.open = false
+		data.init = false
 	end
 
-	return self.comboboxData[node].value
+	-- Cancel any pending list-update timer
+	if data.updateTimer then
+		timer.cancel(data.updateTimer)
+		data.updateTimer = nil
+	end
+
+	-- Reset value to placeholder
+	data.value     = D.select_a_value
+	data.lastValue = D.select_a_value  -- prevent spurious changed on next frame
+	gui.set_text(selected_text, D.select_a_value)
+	gui.set_color(textbox, D.colors.active)
+	gui.set_color(arrow,   D.colors.accent)
+
+	-- Release focus if this node was active
+	if D.nodes["active"] == node then
+		D.nodes["active"]   = nil
+		self.selectedNode   = nil
+	end
+end
+
+-- Reset an auto-suggest box to its unselected placeholder state.
+-- Closes the dropdown, clears typed text and the stored value.
+function M.clearAutobox(self, node)
+	self.comboboxData       = self.comboboxData or {}
+	self.comboboxData[node] = self.comboboxData[node] or {}
+	local data              = self.comboboxData[node]
+
+	local textbox       = gui.get_node(node .. "/textbox")
+	local selected_text = gui.get_node(node .. "/selecttext")
+	local hiddenText    = gui.get_node(node .. "/hiddentext")
+	local markerNode    = gui.get_node(node .. "/marker")
+	local mask          = gui.get_node(node .. "/bg")
+	local arrow         = gui.get_node(node .. "/arrow")
+
+	-- Close dropdown if currently open
+	if data.open then
+		M.deleteCombobox(self, node)
+		gui.set_enabled(mask, false)
+		data.open = false
+		data.init = false
+	end
+
+	-- Cancel any pending list-update timer
+	if data.updateTimer then
+		timer.cancel(data.updateTimer)
+		data.updateTimer = nil
+	end
+
+	-- Reset text fields to placeholder
+	gui.set_text(selected_text, D.select_a_value)
+	gui.set_text(hiddenText, D.select_a_value)
+	data.value     = D.select_a_value
+	data.lastValue = D.select_a_value  -- prevent spurious changed on next frame
+
+	-- Reset marker
+	D.stop_pulsate(markerNode)
+	gui.set_enabled(markerNode, false)
+	local markerPos = gui.get_position(markerNode)
+	markerPos.x = -90
+	gui.set_position(markerNode, markerPos)
+
+	gui.set_color(textbox, D.colors.active)
+	gui.set_color(arrow,   D.colors.inactive)
+
+	-- Release focus if this node was active
+	if D.nodes["active"] == node then
+		D.nodes["active"] = nil
+		self.selectedNode = nil
+	end
+end
+
+-- Override the source list for a standard combobox at runtime.
+-- On the next open the new list is used instead of the one passed to combobox().
+-- Call clearCombobox() afterwards to reset the displayed value if desired.
+function M.setListCombobox(self, node, list)
+	self.comboboxData       = self.comboboxData or {}
+	self.comboboxData[node] = self.comboboxData[node] or {}
+	self.comboboxData[node].customList = list
+	-- Force dropdown to be rebuilt on next open
+	self.comboboxData[node].init = false
+end
+
+-- Override the source list for an auto-suggest box at runtime.
+-- Filtering will be applied to the new list on the next keystroke.
+function M.setListAutobox(self, node, list)
+	self.comboboxData       = self.comboboxData or {}
+	self.comboboxData[node] = self.comboboxData[node] or {}
+	self.comboboxData[node].customList = list
+	-- Force dropdown to be rebuilt on next open
+	self.comboboxData[node].init = false
+end
+
+-- Programmatically set the value of an auto-suggest box and prevent a spurious
+-- 'changed' event on the next frame.  Mirrors setValueAutobox but also syncs lastValue.
+function M.initializeAutobox(self, node, value, active)
+	M.setValueAutobox(self, node, value, active)
+	self.comboboxData       = self.comboboxData or {}
+	self.comboboxData[node] = self.comboboxData[node] or {}
+	-- Prevent spurious 'changed' on the next frame
+	self.comboboxData[node].lastValue = self.comboboxData[node].value
 end
 
 return M

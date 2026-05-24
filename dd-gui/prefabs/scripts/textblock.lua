@@ -54,6 +54,7 @@ end
 
 function M.setTextblock(self, node, text)
 	local textNode = gui.get_node(node .. "/text")
+	local carrier = gui.get_node(node .. "/carrier")
 	-- Check current value
 	self.textboxData = self.textboxData or {}
 	self.textboxData[node] = self.textboxData[node] or {}
@@ -61,8 +62,11 @@ function M.setTextblock(self, node, text)
 	self.textboxData[node].init = false
 	self.textboxData[node].marker = self.textboxData[node].marker or false
 	self.textboxData[node].scroll = self.textboxData[node].scroll or {}
+	self.textboxData[node].scroll.active = false
 	self.textboxData[node].text = text
 	gui.set_text(textNode, text)
+	-- Reset scroll position so new text starts from the top
+	gui.set_position(carrier, vmath.vector3(0, 0, 0))
 	initTextblock(self, node)
 end
 
@@ -129,6 +133,72 @@ function M.textBlock(self, action_id, action, node, enabled)
 			end
 		end
 	end
+end
+
+-- Clear a textblock (set it to empty text and reset scroll to top).
+function M.clearTextblock(self, node)
+	M.setTextblock(self, node, "")
+end
+
+-- Append text to a textblock.  A newline is inserted automatically between
+-- the existing content and the new text (unless the block was empty).
+-- The block is re-initialized so sizing and scroll indicator update correctly.
+function M.appendTextblock(self, node, text)
+	self.textboxData       = self.textboxData or {}
+	self.textboxData[node] = self.textboxData[node] or {}
+	self.textboxData[node].text = self.textboxData[node].text or ""
+
+	local currentText = self.textboxData[node].text
+	local newText
+	if currentText == "" then
+		newText = text
+	else
+		newText = currentText .. "\n" .. text
+	end
+	M.setTextblock(self, node, newText)
+end
+
+-- Programmatically scroll a textblock to the very bottom.
+-- Useful after calling appendTextblock so the latest line is visible.
+-- Has no effect if all content already fits within the visible area.
+function M.scrollToBottomTextblock(self, node)
+	self.textboxData       = self.textboxData or {}
+	self.textboxData[node] = self.textboxData[node] or {}
+
+	local bgNode  = gui.get_node(node .. "/bg")
+	local carrier = gui.get_node(node .. "/carrier")
+	local dragpos = gui.get_node(node .. "/dragpos")
+
+	local maxScroll = gui.get_size(carrier).y - gui.get_size(bgNode).y
+	if maxScroll > 0 then
+		gui.set_position(carrier, vmath.vector3(0, maxScroll, 0))
+		-- Sync scroll indicator to the bottom position
+		local dragPos = gui.get_position(dragpos)
+		dragPos.y = -gui.get_size(bgNode).y + 15
+		gui.set_position(dragpos, dragPos)
+		gui.set_enabled(dragpos, true)
+	end
+end
+
+-- Programmatically scroll a textblock to the very top.
+function M.scrollToTopTextblock(self, node)
+	self.textboxData       = self.textboxData or {}
+	self.textboxData[node] = self.textboxData[node] or {}
+
+	local carrier = gui.get_node(node .. "/carrier")
+	local dragpos = gui.get_node(node .. "/dragpos")
+
+	gui.set_position(carrier, vmath.vector3(0, 0, 0))
+	local dragPos = gui.get_position(dragpos)
+	dragPos.y = -15
+	gui.set_position(dragpos, dragPos)
+end
+
+-- Return the current stored text of a textblock.
+function M.getTextblock(self, node)
+	self.textboxData       = self.textboxData or {}
+	self.textboxData[node] = self.textboxData[node] or {}
+	return self.textboxData[node].text or ""
 end
 
 return M
