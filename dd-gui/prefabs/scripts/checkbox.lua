@@ -13,7 +13,7 @@ end
 local function showTooltip(txtBox, txtNode, text)
 	if text then
 		gui.set_text(txtNode, text)
-		local w = gui.get_text_metrics_from_node(txtNode).width
+		local w = D.getTextMetrics(txtNode).width
 		local s = gui.get_size(txtBox)
 		gui.set_size(txtBox, vmath.vector3(w + 20, s.y, s.z))
 		gui.set_enabled(txtBox, true)

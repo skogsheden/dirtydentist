@@ -159,7 +159,7 @@ function M.slider(self, action_id, action, node, enabled, showpopup, min, max, s
 				curVal = math.floor(curVal)
 			end
 			gui.set_text(text, tostring(curVal))
-			local text_width  = gui.get_text_metrics_from_node(text).width
+			local text_width  = D.getTextMetrics(text).width
 			local current_size = gui.get_size(text)
 			gui.set_size(textbox, vmath.vector3(text_width + 20, current_size.y, current_size.z))
 			gui.set_size(text,    vmath.vector3(text_width + 20, current_size.y, current_size.z))

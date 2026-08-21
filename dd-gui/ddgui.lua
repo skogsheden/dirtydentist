@@ -171,6 +171,53 @@ function D.check_device(self)
 	end
 end
 
+-- ---------------------------------------------------------------------------
+-- Text metrics
+-- gui.get_text_metrics_from_node() was removed from the gui API. The
+-- replacement is resource.get_text_metrics() together with the font resource
+-- fetched via gui.get_font_resource(). This helper wraps that and forwards the
+-- node's own text settings so the result matches what is actually rendered.
+--
+--   local w = D.getTextMetrics(textNode).width
+--
+-- Returns a table with width, height, max_ascent and max_descent.
+-- Optionally measure a different string than the node's current text:
+--   D.getTextMetrics(textNode, "some other string")
+-- Note: metrics are always unscaled - multiply by gui.get_scale(node) yourself
+-- if the node is scaled.
+-- ---------------------------------------------------------------------------
+local font_resource_cache = {}
+
+local function get_font_resource(font_name)
+	local res = font_resource_cache[font_name]
+	if not res then
+		res = gui.get_font_resource(font_name)
+		font_resource_cache[font_name] = res
+	end
+	return res
+end
+
+-- Reused between calls to avoid allocating a new table every frame
+local metrics_options = {}
+
+function D.getTextMetrics(node, text)
+	metrics_options.width      = gui.get_size(node).x
+	metrics_options.tracking   = gui.get_tracking(node)
+	metrics_options.leading    = gui.get_leading(node)
+	metrics_options.line_break = gui.get_line_break(node)
+
+	return resource.get_text_metrics(
+		get_font_resource(gui.get_font(node)),
+		text or gui.get_text(node) or "",
+		metrics_options
+	)
+end
+
+-- Convenience wrapper when only the width is needed.
+function D.getTextWidth(node, text)
+	return D.getTextMetrics(node, text).width
+end
+
 -- Function that limits input values
 function D.valuelimit(v, min, max)
 	if v < min then
@@ -191,7 +238,7 @@ end
 
 function D.stop_pulsate(node)
 	-- Function to stop the pulsating effect
-	gui.cancel_animation(node, gui.PROP_COLOR) -- Cancel all animations on color, not just loop
+	gui.cancel_animations(node, gui.PROP_COLOR) -- Cancel all animations on color, not just loop
 end
 
 return D

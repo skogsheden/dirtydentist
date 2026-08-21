@@ -20,12 +20,12 @@ local function initTextblock(self, node)
 		-- Atelast same size as bg
 		gui.set_position(carrier, vmath.vector3(0,0,0))
 		gui.set_size(textNode, vmath.vector3(gui.get_size(bgNode).x-20, gui.get_size(bgNode).y, 0))	
-		local textMetrics = gui.get_text_metrics_from_node(textNode)
+		local textMetrics = D.getTextMetrics(textNode)
 		gui.set_position(dragpos, vmath.vector3(gui.get_size(bgNode).x-8, 10, 0))
 		--Adjust text and carrier blocks to fit all text
 		gui.set_size(textNode, vmath.vector3(gui.get_size(bgNode).x-20, textMetrics.height+20, 0))
 		gui.set_size(carrier, vmath.vector3(gui.get_size(bgNode).x-20, textMetrics.height+20, 0))
-		textMetrics = gui.get_text_metrics_from_node(textNode)
+		textMetrics = D.getTextMetrics(textNode)
 		if textMetrics.height > gui.get_size(bgNode).y then
 			self.textboxData[node].marker = true
 			gui.set_enabled(dragpos, true)

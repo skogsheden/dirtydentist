@@ -26,7 +26,7 @@ local function editLine(self, action, node, type, equal_length)
 			text = text .. utf8.sub(gui.get_text(textNode), hiddenlength+2, -1)
 		end
 		gui.set_text(textNode, text)
-		self.textboxData[node].makerpos.x = gui.get_text_metrics_from_node(hiddenText).width
+		self.textboxData[node].makerpos.x = D.getTextMetrics(hiddenText).width
 		gui.set_position(markerNode, self.textboxData[node].makerpos)
 	else
 		self.textboxData[node].makerpos = gui.get_position(markerNode)
@@ -40,7 +40,7 @@ local function editLine(self, action, node, type, equal_length)
 		end
 		gui.set_text(hiddenText, text)
 		gui.set_text(textNode, text)
-		self.textboxData[node].makerpos.x = gui.get_text_metrics_from_node(hiddenText).width
+		self.textboxData[node].makerpos.x = D.getTextMetrics(hiddenText).width
 		gui.set_position(markerNode, self.textboxData[node].makerpos)
 	end
 end
@@ -130,18 +130,18 @@ function M.textbox(self, action_id, action, node, enabled, tab_to, placeholder, 
 			self.textboxData[node].makerpos = gui.get_position(markerNode) -- Convert to local pos
 			self.textboxData[node].makerpos.y = 0 -- Set y position to 0 to keep in middle of box
 			gui.set_position(markerNode, self.textboxData[node].makerpos)
-			if gui.get_text_metrics_from_node(hiddenText).width > self.textboxData[node].makerpos.x and utf8.len(gui.get_text(hiddenText)) > 1 then
-				while gui.get_text_metrics_from_node(hiddenText).width > self.textboxData[node].makerpos.x do -- Adjust hidden string to fit hiddenstring
+			if D.getTextMetrics(hiddenText).width > self.textboxData[node].makerpos.x and utf8.len(gui.get_text(hiddenText)) > 1 then
+				while D.getTextMetrics(hiddenText).width > self.textboxData[node].makerpos.x do -- Adjust hidden string to fit hiddenstring
 					local shortenstring = utf8.sub(gui.get_text(hiddenText), 1, -2)
 					gui.set_text(hiddenText, shortenstring)
 					if utf8.len(shortenstring) <= 2 then
 						break
 					end
 				end
-				self.textboxData[node].makerpos.x = gui.get_text_metrics_from_node(hiddenText).width -- Update marker to be at the end the hiddenstring
+				self.textboxData[node].makerpos.x = D.getTextMetrics(hiddenText).width -- Update marker to be at the end the hiddenstring
 				gui.set_position(markerNode, self.textboxData[node].makerpos)
 			else
-				self.textboxData[node].makerpos.x = gui.get_text_metrics_from_node(hiddenText).width -- Update marker to be at the end the hiddenstring
+				self.textboxData[node].makerpos.x = D.getTextMetrics(hiddenText).width -- Update marker to be at the end the hiddenstring
 				gui.set_position(markerNode, self.textboxData[node].makerpos)
 			end
 			gui.set_enabled(markerNode, true) -- Enable marker
@@ -149,13 +149,13 @@ function M.textbox(self, action_id, action, node, enabled, tab_to, placeholder, 
 			gui.set_text(hiddenText, gui.get_text(textNode))
 			self.textboxData[node].makerpos = gui.get_position(markerNode) -- Convert to local pos
 			self.textboxData[node].makerpos.y = 0 -- Set y position to 0 to keep in middle of box
-			self.textboxData[node].makerpos.x = gui.get_text_metrics_from_node(hiddenText).width -- Update marker to be at the end the hiddenstring
+			self.textboxData[node].makerpos.x = D.getTextMetrics(hiddenText).width -- Update marker to be at the end the hiddenstring
 			gui.set_position(markerNode, self.textboxData[node].makerpos)
 			D.nodes["tab"] = false -- Reset the tab flag after processing
 			gui.set_enabled(markerNode, true) -- Enable marker
 			D.pulsate(markerNode)
 			-- Input text
-		elseif action_id == hash("text") and gui.get_text_metrics_from_node(textNode).width < (gui.get_size(bgNode).x-25)
+		elseif action_id == hash("text") and D.getTextMetrics(textNode).width < (gui.get_size(bgNode).x-25)
 				and (maxlength == nil or utf8.len(gui.get_text(textNode)) < maxlength) then
 			if utf8.len(gui.get_text(hiddenText)) < utf8.len(gui.get_text(textNode)) then -- Hidden is shorter add text for that point
 				editLine(self, action, node, "text", false)
@@ -179,7 +179,7 @@ function M.textbox(self, action_id, action, node, enabled, tab_to, placeholder, 
 			local shortenstring = utf8.sub(gui.get_text(hiddenText), 1, -2)
 			gui.set_text(hiddenText, shortenstring)
 			self.textboxData[node].makerpos = gui.get_position(markerNode)
-			self.textboxData[node].makerpos.x = gui.get_text_metrics_from_node(hiddenText).width
+			self.textboxData[node].makerpos.x = D.getTextMetrics(hiddenText).width
 			gui.set_position(markerNode, self.textboxData[node].makerpos)
 		elseif action_id == hash("right") and action.pressed and utf8.len(gui.get_text(hiddenText)) < utf8.len(gui.get_text(textNode)) then
 			local lengthNew = utf8.len(gui.get_text(hiddenText))
@@ -187,7 +187,7 @@ function M.textbox(self, action_id, action, node, enabled, tab_to, placeholder, 
 			local shortenstring = utf8.sub(gui.get_text(textNode), 1, -lenDiff)
 			gui.set_text(hiddenText, shortenstring)
 			self.textboxData[node].makerpos = gui.get_position(markerNode)
-			self.textboxData[node].makerpos.x = gui.get_text_metrics_from_node(hiddenText).width
+			self.textboxData[node].makerpos.x = D.getTextMetrics(hiddenText).width
 			gui.set_position(markerNode, self.textboxData[node].makerpos)
 		end
 		self.textboxData[node].text = gui.get_text(textNode)
@@ -322,7 +322,7 @@ local function moveLineMulti(self, node, direction)
 	end
 	
 	local markerPos = gui.get_position(currentline.marker)
-	markerPos.x = gui.get_text_metrics_from_node(currentline.hidden).width
+	markerPos.x = D.getTextMetrics(currentline.hidden).width
 	gui.set_position(currentline.marker, markerPos)
 
 	if gui.get_screen_position(currentline.innerbox).y >= gui.get_screen_position(bgNode).y and direction == "up" then
@@ -425,7 +425,7 @@ function M.textboxMultiline(self, action_id, action, node, enabled, tab_to)
 			gui.set_text(self.textboxData[node].lines[self.textboxData[node].activeline].hidden, gui.get_text(self.textboxData[node].lines[self.textboxData[node].activeline].text))
 			gui.set_enabled(self.textboxData[node].lines[self.textboxData[node].activeline].marker, true) -- Enable marker
 			local markerpos = gui.get_position(self.textboxData[node].lines[self.textboxData[node].activeline].marker)
-			markerpos.x = gui.get_text_metrics_from_node(self.textboxData[node].lines[self.textboxData[node].activeline].hidden).width -- Update marker to be at the end the hiddenstring
+			markerpos.x = D.getTextMetrics(self.textboxData[node].lines[self.textboxData[node].activeline].hidden).width -- Update marker to be at the end the hiddenstring
 			gui.set_position(self.textboxData[node].lines[self.textboxData[node].activeline].marker, markerpos)
 			gui.set_enabled(self.textboxData[node].lines[self.textboxData[node].activeline].marker, true)
 			D.pulsate(self.textboxData[node].lines[self.textboxData[node].activeline].marker)
@@ -483,7 +483,7 @@ function M.textboxMultiline(self, action_id, action, node, enabled, tab_to)
 			local shortenstring = utf8.sub(gui.get_text(currentline.hidden), 1, -2)
 			gui.set_text(currentline.hidden, shortenstring)
 			local markerPos = gui.get_position(currentline.marker)
-			markerPos.x = gui.get_text_metrics_from_node(currentline.hidden).width
+			markerPos.x = D.getTextMetrics(currentline.hidden).width
 			gui.set_position(currentline.marker, markerPos)
 		elseif action_id == hash("right") and action.pressed and utf8.len(gui.get_text(currentline.hidden)) < utf8.len(gui.get_text(currentline.text)) then
 			local lengthNew = utf8.len(gui.get_text(currentline.hidden))
@@ -491,7 +491,7 @@ function M.textboxMultiline(self, action_id, action, node, enabled, tab_to)
 			local shortenstring = utf8.sub(gui.get_text(currentline.text), 1, -lenDiff)
 			gui.set_text(currentline.hidden, shortenstring)
 			local markerPos = gui.get_position(currentline.marker)
-			markerPos.x = gui.get_text_metrics_from_node(currentline.hidden).width
+			markerPos.x = D.getTextMetrics(currentline.hidden).width
 			gui.set_position(currentline.marker, markerPos)
 		end
 
@@ -505,7 +505,7 @@ function M.textboxMultiline(self, action_id, action, node, enabled, tab_to)
 				self.textboxData[node].makerpos = gui.get_position(self.textboxData[node].lines[i].marker) -- Convert to local pos
 				self.textboxData[node].makerpos.y = 0
 				if utf8.len(gui.get_text(self.textboxData[node].lines[i].hidden)) >= 1 then -- If two or more letters allow editing
-					while gui.get_text_metrics_from_node(self.textboxData[node].lines[i].hidden).width > self.textboxData[node].makerpos.x do -- Adjust hidden string to fit hiddenstring
+					while D.getTextMetrics(self.textboxData[node].lines[i].hidden).width > self.textboxData[node].makerpos.x do -- Adjust hidden string to fit hiddenstring
 						local shortenstring = utf8.sub(gui.get_text(self.textboxData[node].lines[i].hidden), 1, -2)
 						gui.set_text(self.textboxData[node].lines[i].hidden, shortenstring)
 						if utf8.len(shortenstring) <= 1 then
@@ -513,7 +513,7 @@ function M.textboxMultiline(self, action_id, action, node, enabled, tab_to)
 						end
 					end
 				end
-				self.textboxData[node].makerpos.x = gui.get_text_metrics_from_node(self.textboxData[node].lines[i].hidden).width -- Update marker to be at the end the hiddenstring
+				self.textboxData[node].makerpos.x = D.getTextMetrics(self.textboxData[node].lines[i].hidden).width -- Update marker to be at the end the hiddenstring
 				gui.set_position(self.textboxData[node].lines[i].marker, self.textboxData[node].makerpos)
 				D.pulsate(self.textboxData[node].lines[i].marker)
 			elseif action_id == hash("touch") and action.released and not gui.pick_node(self.textboxData[node].lines[i].innerbox, action.x, action.y) then
@@ -537,7 +537,7 @@ function M.textboxMultiline(self, action_id, action, node, enabled, tab_to)
 				currentline = self.textboxData[node].lines[self.textboxData[node].activeline]
 				gui.set_text(currentline.hidden, rowabove)
 				local markerPos = gui.get_position(currentline.marker)
-				markerPos.x = gui.get_text_metrics_from_node(currentline.hidden).width
+				markerPos.x = D.getTextMetrics(currentline.hidden).width
 				gui.set_position(currentline.marker, markerPos)
 				gui.set_enabled(currentline.marker, true)
 				D.pulsate(currentline.marker)
@@ -558,7 +558,7 @@ function M.textboxMultiline(self, action_id, action, node, enabled, tab_to)
 				gui.set_text(currentline.hidden, text)
 				text = text .. utf8.sub(gui.get_text(currentline.text), hiddenlength+1, -1)
 				gui.set_text(currentline.text, text)
-				markerPos.x = gui.get_text_metrics_from_node(currentline.hidden).width
+				markerPos.x = D.getTextMetrics(currentline.hidden).width
 				gui.set_position(currentline.marker, markerPos)
 			elseif utf8.len(gui.get_text(currentline.hidden)) == utf8.len(gui.get_text(currentline.text)) then -- If equal remove from the end
 				local markerPos = gui.get_position(currentline.marker)
@@ -566,7 +566,7 @@ function M.textboxMultiline(self, action_id, action, node, enabled, tab_to)
 				text = utf8.sub(text, 1, -2)
 				gui.set_text(currentline.hidden, text)
 				gui.set_text(currentline.text, text)
-				markerPos.x = gui.get_text_metrics_from_node(currentline.hidden).width
+				markerPos.x = D.getTextMetrics(currentline.hidden).width
 				gui.set_position(currentline.marker, markerPos)
 			end
 		end
@@ -579,7 +579,7 @@ function M.textboxMultiline(self, action_id, action, node, enabled, tab_to)
 				gui.set_text(currentline.hidden, text)
 				text = text .. utf8.sub(gui.get_text(currentline.text), hiddenlength+2, -1)
 				gui.set_text(currentline.text, text)
-				markerPos.x = gui.get_text_metrics_from_node(currentline.hidden).width
+				markerPos.x = D.getTextMetrics(currentline.hidden).width
 				gui.set_position(currentline.marker, markerPos)
 			end
 		end
@@ -644,7 +644,7 @@ function M.textboxMultiline(self, action_id, action, node, enabled, tab_to)
 		end
 
 		local currentline = self.textboxData[node].lines[self.textboxData[node].activeline]
-		if action_id == hash("text") and gui.get_text_metrics_from_node(currentline.text).width < (gui.get_size(bgNode).x-25) then
+		if action_id == hash("text") and D.getTextMetrics(currentline.text).width < (gui.get_size(bgNode).x-25) then
 			if utf8.len(gui.get_text(currentline.hidden)) < utf8.len(gui.get_text(currentline.text)) then -- Hidden is shorter add text for that point
 				local hiddenlength = utf8.len(gui.get_text(currentline.hidden))
 				self.textboxData[node].makerpos = gui.get_position(currentline.marker)
@@ -653,7 +653,7 @@ function M.textboxMultiline(self, action_id, action, node, enabled, tab_to)
 				gui.set_text(currentline.hidden, text)
 				text = text .. utf8.sub(gui.get_text(currentline.text), hiddenlength+1, -1)
 				gui.set_text(currentline.text, text)
-				self.textboxData[node].makerpos.x = gui.get_text_metrics_from_node(currentline.hidden).width
+				self.textboxData[node].makerpos.x = D.getTextMetrics(currentline.hidden).width
 				gui.set_position(currentline.marker, self.textboxData[node].makerpos)
 			elseif utf8.len(gui.get_text(currentline.hidden)) == utf8.len(gui.get_text(currentline.text)) then -- If equal add text at the end
 				self.textboxData[node].makerpos = gui.get_position(currentline.marker)
@@ -661,10 +661,10 @@ function M.textboxMultiline(self, action_id, action, node, enabled, tab_to)
 				text = text .. action.text
 				gui.set_text(currentline.hidden, text)
 				gui.set_text(currentline.text, text)
-				self.textboxData[node].makerpos.x = gui.get_text_metrics_from_node(currentline.text).width
+				self.textboxData[node].makerpos.x = D.getTextMetrics(currentline.text).width
 				gui.set_position(currentline.marker, self.textboxData[node].makerpos)
 			end
-		elseif action_id == hash("text") and gui.get_text_metrics_from_node(currentline.text).width >= (gui.get_size(bgNode).x-25) then
+		elseif action_id == hash("text") and D.getTextMetrics(currentline.text).width >= (gui.get_size(bgNode).x-25) then
 			gui.set_enabled(currentline.marker, false)
 			self.textboxData[node].linecount = self.textboxData[node].linecount + 1
 			self.textboxData[node].activeline = self.textboxData[node].activeline + 1

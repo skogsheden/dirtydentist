@@ -516,7 +516,7 @@ local function updateTextDisplay(self, node, newText, updateMarker)
 
 	-- Reject text that is too wide for the input field
 	gui.set_text(hiddenText, newText)
-	local ok, metrics = pcall(gui.get_text_metrics_from_node, hiddenText)
+	local ok, metrics = pcall(D.getTextMetrics, hiddenText)
 	local textWidth = (ok and metrics) and (metrics.width * (self.comboboxData[node].mag or 1)) or 0
 	local maxWidth  = gui.get_size(textbox).x - 25
 	if textWidth > maxWidth then return false end
@@ -526,7 +526,7 @@ local function updateTextDisplay(self, node, newText, updateMarker)
 
 	if updateMarker then
 		local markerPos = gui.get_position(markerNode)
-		local ok2, w = pcall(gui.get_text_metrics_from_node, hiddenText)
+		local ok2, w = pcall(D.getTextMetrics, hiddenText)
 		markerPos.x = ok2 and w and
 			math.min(math.max(-90, w.width * (self.comboboxData[node].mag or 1) - 90), maxWidth - 15)
 			or -90
@@ -752,7 +752,7 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 			local hiddenTextContent = gui.get_text(hiddenText) or ""
 			while utf8.len(hiddenTextContent) > 0 do
 				local textWidth = 0
-				local success, width = pcall(gui.get_text_metrics_from_node, hiddenText)
+				local success, width = pcall(D.getTextMetrics, hiddenText)
 				if success and width then
 					textWidth = width.width * self.comboboxData[node].mag
 				else
@@ -772,7 +772,7 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 			end
 
 			-- Snap marker to end of trimmed hidden text
-			local success, width = pcall(gui.get_text_metrics_from_node, hiddenText)
+			local success, width = pcall(D.getTextMetrics, hiddenText)
 			if success and width then
 				markpos.x = math.max(-90, width.width * self.comboboxData[node].mag - 90)
 			else
@@ -804,7 +804,7 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 
 			local hiddenTextContent = gui.get_text(hiddenText) or ""
 			while utf8.len(hiddenTextContent) > 0 do
-				local success, width = pcall(gui.get_text_metrics_from_node, hiddenText)
+				local success, width = pcall(D.getTextMetrics, hiddenText)
 				if not success or not width then break end
 
 				if width.width * self.comboboxData[node].mag - 90 <= markpos.x then
@@ -818,7 +818,7 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 				hiddenTextContent = shortenstring
 			end
 
-			local success, width = pcall(gui.get_text_metrics_from_node, hiddenText)
+			local success, width = pcall(D.getTextMetrics, hiddenText)
 			if success and width then
 				markpos.x = math.max(-90, width.width * self.comboboxData[node].mag - 90)
 			else
@@ -835,7 +835,7 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 				local shortenstring = utf8.sub(hiddenTextContent, 1, -2)
 				gui.set_text(hiddenText, shortenstring)
 				local markerPos = gui.get_position(markerNode)
-				local success, width = pcall(gui.get_text_metrics_from_node, hiddenText)
+				local success, width = pcall(D.getTextMetrics, hiddenText)
 				if success and width then
 					markerPos.x = math.max(-90, width.width * self.comboboxData[node].mag - 90)
 				else
@@ -853,7 +853,7 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 					local shortenstring = utf8.sub(selectedTextContent, 1, -lenDiff)
 					gui.set_text(hiddenText, shortenstring)
 					local markerPos = gui.get_position(markerNode)
-					local success, width = pcall(gui.get_text_metrics_from_node, hiddenText)
+					local success, width = pcall(D.getTextMetrics, hiddenText)
 					if success and width then
 						markerPos.x = math.max(-90, width.width * self.comboboxData[node].mag - 90)
 					else
@@ -883,7 +883,7 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 
 			-- Advance cursor past the inserted character
 			local markerPos = gui.get_position(markerNode)
-			local success, width = pcall(gui.get_text_metrics_from_node, hiddenText)
+			local success, width = pcall(D.getTextMetrics, hiddenText)
 			if success and width then
 				markerPos.x = math.max(-90, width.width * (self.comboboxData[node].mag or 1) - 90)
 			else
@@ -917,7 +917,7 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 					self.comboboxData[node].value = newText
 
 					local markerPos = gui.get_position(markerNode)
-					local success, width = pcall(gui.get_text_metrics_from_node, hiddenText)
+					local success, width = pcall(D.getTextMetrics, hiddenText)
 					if success and width then
 						markerPos.x = math.max(-90, width.width * (self.comboboxData[node].mag or 1) - 90)
 					else
@@ -947,7 +947,7 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 				gui.set_text(selected_text, text)
 				self.comboboxData[node].value = text
 
-				local success, width = pcall(gui.get_text_metrics_from_node, hiddenText)
+				local success, width = pcall(D.getTextMetrics, hiddenText)
 				if success and width then
 					markerPos.x = math.max(-90, width.width * self.comboboxData[node].mag - 90)
 				end
