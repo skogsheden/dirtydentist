@@ -8,7 +8,8 @@ local M = {}
 -- node's own line-break/width/leading/tracking and gui scale) on top of
 -- the new resource.get_text_metrics().
 local function get_text_metrics_from_node(node)
-	local font = gui.get_font_resource(node)
+	local font_id = gui.get_font(node)
+	local font = gui.get_font_resource(font_id)
 	local text = gui.get_text(node)
 	local size = gui.get_size(node)
 	local options = {
