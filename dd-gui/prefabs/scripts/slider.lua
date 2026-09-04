@@ -159,7 +159,7 @@ function M.slider(self, action_id, action, node, enabled, showpopup, min, max, s
 				curVal = math.floor(curVal)
 			end
 			gui.set_text(text, tostring(curVal))
-			local text_width  = D.getTextMetrics(text).width
+			local text_width  = gui.get_text_metrics_from_node(text).width
 			local current_size = gui.get_size(text)
 			gui.set_size(textbox, vmath.vector3(text_width + 20, current_size.y, current_size.z))
 			gui.set_size(text,    vmath.vector3(text_width + 20, current_size.y, current_size.z))
@@ -171,11 +171,18 @@ function M.slider(self, action_id, action, node, enabled, showpopup, min, max, s
 		gui.set_color(handleCenter, D.colors.accent)
 	end
 
-	-- Apply disabled visual state to the handle so it looks inactive.
+	-- Apply disabled visual state to the handle so it looks inactive,
+	-- and restore the normal accent color the moment it becomes enabled
+	-- again (only once on the transition, so it doesn't fight with the
+	-- hover/press coloring above on every frame).
 	if not enabled then
 		gui.set_color(handleCenter, D.colors.inactive)
 		gui.set_color(slidelevel,   D.colors.inactive)
+	elseif self.slider[node].wasEnabled == false then
+		gui.set_color(handleCenter, D.colors.accent)
+		gui.set_color(slidelevel,   D.colors.accent)
 	end
+	self.slider[node].wasEnabled = enabled
 
 	-- Calculate value
 	local currentValue = (gui.get_position(handle).x+slider_size.x/2)/(slider_size.x)
