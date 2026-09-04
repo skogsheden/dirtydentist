@@ -44,7 +44,11 @@ function M.togglebutton(self, action_id, action, node, enabled, text)
 			gui.set_color(bgNode, pressed and D.colors.accent or D.colors.hover)
 			gui.set_color(textNode, pressed and D.colors.white or D.colors.black)
 		else
+			-- Not hovered: still restore both colors every enabled frame, otherwise
+			-- the text stays D.colors.inactive (grey) after a disable -> re-enable
+			-- cycle until the mouse happens to hover over the button again.
 			gui.set_color(bgNode, pressed and D.colors.accent or D.colors.active)
+			gui.set_color(textNode, pressed and D.colors.white or D.colors.black)
 		end
 	elseif not enabled then
 		pressed = false
