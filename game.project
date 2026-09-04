@@ -14,7 +14,7 @@ high_dpi = 1
 
 [project]
 title = DD-GUI
-version = 0.4.0
+version = 0.4.1
 publisher = Skogsheden Radiologikonsult AB
 developer = Nils Gustafsson
 bundle_resources = /dd-gui/
