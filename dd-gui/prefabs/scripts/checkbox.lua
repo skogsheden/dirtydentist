@@ -3,6 +3,27 @@
 
 local M = {}
 
+-- Defold 1.13 removed gui.get_text_metrics_from_node(). This restores the
+-- same behavior (text metrics for a node's current text, honoring the
+-- node's own line-break/width/leading/tracking and gui scale) on top of
+-- the new resource.get_text_metrics().
+local function get_text_metrics_from_node(node)
+	local font = gui.get_font_resource(node)
+	local text = gui.get_text(node)
+	local size = gui.get_size(node)
+	local options = {
+		width = size.x,
+		leading = gui.get_leading(node),
+		tracking = gui.get_tracking(node),
+		line_break = gui.get_line_break(node),
+	}
+	local metrics = resource.get_text_metrics(font, text, options)
+	local scale = gui.get_scale(node)
+	metrics.width = metrics.width * scale.x
+	metrics.height = metrics.height * scale.y
+	return metrics
+end
+
 -- Apply checked/unchecked visual state (enabled appearance).
 local function applyCheckState(bgNode, checkNode, value)
 	gui.set_enabled(checkNode, value)
@@ -13,7 +34,7 @@ end
 local function showTooltip(txtBox, txtNode, text)
 	if text then
 		gui.set_text(txtNode, text)
-		local w = D.getTextMetrics(txtNode).width
+		local w = get_text_metrics_from_node(txtNode).width
 		local s = gui.get_size(txtBox)
 		gui.set_size(txtBox, vmath.vector3(w + 20, s.y, s.z))
 		gui.set_enabled(txtBox, true)

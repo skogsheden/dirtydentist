@@ -3,6 +3,27 @@
 
 local M = {}
 
+-- Defold 1.13 removed gui.get_text_metrics_from_node(). This restores the
+-- same behavior (text metrics for a node's current text, honoring the
+-- node's own line-break/width/leading/tracking and gui scale) on top of
+-- the new resource.get_text_metrics().
+local function get_text_metrics_from_node(node)
+	local font = gui.get_font_resource(node)
+	local text = gui.get_text(node)
+	local size = gui.get_size(node)
+	local options = {
+		width = size.x,
+		leading = gui.get_leading(node),
+		tracking = gui.get_tracking(node),
+		line_break = gui.get_line_break(node),
+	}
+	local metrics = resource.get_text_metrics(font, text, options)
+	local scale = gui.get_scale(node)
+	metrics.width = metrics.width * scale.x
+	metrics.height = metrics.height * scale.y
+	return metrics
+end
+
 function M.resetSlider(self, node)
 	self.slider = self.slider or {}
 	if not self.slider[node] then
@@ -159,7 +180,7 @@ function M.slider(self, action_id, action, node, enabled, showpopup, min, max, s
 				curVal = math.floor(curVal)
 			end
 			gui.set_text(text, tostring(curVal))
-			local text_width  = gui.get_text_metrics_from_node(text).width
+			local text_width  = get_text_metrics_from_node(text).width
 			local current_size = gui.get_size(text)
 			gui.set_size(textbox, vmath.vector3(text_width + 20, current_size.y, current_size.z))
 			gui.set_size(text,    vmath.vector3(text_width + 20, current_size.y, current_size.z))
