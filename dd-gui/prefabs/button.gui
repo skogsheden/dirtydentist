@@ -11,6 +11,11 @@ nodes {
     x: 150.0
     y: 30.0
   }
+  color {
+    x: 0.33
+    y: 0.33
+    z: 0.33
+  }
   type: TYPE_BOX
   texture: "dropdown/button"
   id: "bg"
@@ -27,11 +32,6 @@ nodes {
   size {
     x: 150.0
     y: 30.0
-  }
-  color {
-    x: 0.0
-    y: 0.0
-    z: 0.0
   }
   type: TYPE_TEXT
   text: "<button text>"

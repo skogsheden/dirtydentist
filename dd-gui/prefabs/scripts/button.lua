@@ -7,19 +7,16 @@ function M.toggleActive(self, node, enabled)
 	local bgNode = gui.get_node(node .. "/bg")
 	local textNode = gui.get_node(node .. "/text")
 	if not enabled then
-		gui.set_color(bgNode, D.colors.active)
-		gui.set_color(textNode, D.colors.inactive)
+		gui.set_color(bgNode, D.colors.inactive)
+		gui.set_color(textNode, D.colors.text_inactive)
 	else
 		gui.set_color(bgNode, D.colors.active)
-		gui.set_color(textNode, D.colors.black)
+		gui.set_color(textNode, D.colors.text)
 	end
 end
 
 function M.togglebutton(self, action_id, action, node, enabled, text)
-	if action ~= nil and action.x ~= nil then
-		D.currentMousePos.x = action.x
-		D.currentMousePos.y = action.y
-	end
+	D.pointer(action)
 
 	-- Get nodes
 	local bgNode = gui.get_node(node .. "/bg")
@@ -42,18 +39,18 @@ function M.togglebutton(self, action_id, action, node, enabled, text)
 				self.pressed_buttons[node] = pressed
 			end
 			gui.set_color(bgNode, pressed and D.colors.accent or D.colors.hover)
-			gui.set_color(textNode, pressed and D.colors.white or D.colors.black)
+			gui.set_color(textNode, D.colors.text)
 		else
 			-- Not hovered: still restore both colors every enabled frame, otherwise
-			-- the text stays D.colors.inactive (grey) after a disable -> re-enable
+			-- the text stays D.colors.text_inactive (dimmed) after a disable -> re-enable
 			-- cycle until the mouse happens to hover over the button again.
 			gui.set_color(bgNode, pressed and D.colors.accent or D.colors.active)
-			gui.set_color(textNode, pressed and D.colors.white or D.colors.black)
+			gui.set_color(textNode, D.colors.text)
 		end
 	elseif not enabled then
 		pressed = false
-		gui.set_color(bgNode, D.colors.active)
-		gui.set_color(textNode, D.colors.inactive)
+		gui.set_color(bgNode, D.colors.inactive)
+		gui.set_color(textNode, D.colors.text_inactive)
 	end
 
 	local prev = self.pressed_buttons[node .. "_prev"]
@@ -64,10 +61,7 @@ function M.togglebutton(self, action_id, action, node, enabled, text)
 end
 
 function M.button(self, action_id, action, node, enabled, accent, text)
-	if action ~= nil and action.x ~= nil then
-		D.currentMousePos.x = action.x
-		D.currentMousePos.y = action.y
-	end
+	D.pointer(action)
 
 	-- Get nodes
 	local bgNode = gui.get_node(node .. "/bg")
@@ -87,25 +81,24 @@ function M.button(self, action_id, action, node, enabled, accent, text)
 
 	-- Handle disabled state
 	if not enabled then
-		gui.set_color(bgNode, D.colors.active)
-		gui.set_color(textNode, D.colors.inactive)
+		gui.set_color(bgNode, D.colors.inactive)
+		gui.set_color(textNode, D.colors.text_inactive)
 	else
-		-- Set text color based on accent
-		gui.set_color(textNode, accent and D.colors.white or D.colors.black)
+		gui.set_color(textNode, D.colors.text)
 
 		if self.selectedNode == nil or self.selectedNode == node then
 			if gui.pick_node(bgNode, D.currentMousePos.x, D.currentMousePos.y) then
 				if action_id == hash("touch") and action.pressed then
 					pressed = true
 					self.pressed_buttons[node] = pressed
-					gui.set_color(bgNode, accent and D.colors.accent or D.colors.active)
+					gui.set_color(bgNode, accent and D.colors.accentselect or D.colors.select)
 					result = true
 				elseif action_id == hash("touch") and action.released then
 					pressed = false
 					self.pressed_buttons[node] = pressed
 					gui.set_color(bgNode, accent and D.colors.accenthover or D.colors.hover)
 				elseif pressed then
-					gui.set_color(bgNode, accent and D.colors.accent or D.colors.active)
+					gui.set_color(bgNode, accent and D.colors.accentselect or D.colors.select)
 				else
 					gui.set_color(bgNode, accent and D.colors.accenthover or D.colors.hover)
 				end
@@ -133,10 +126,10 @@ function M.setTogglebutton(self, node, value)
 
 	if value then
 		gui.set_color(bgNode, D.colors.accent)
-		gui.set_color(textNode, D.colors.white)
+		gui.set_color(textNode, D.colors.text)
 	else
 		gui.set_color(bgNode, D.colors.active)
-		gui.set_color(textNode, D.colors.black)
+		gui.set_color(textNode, D.colors.text)
 	end
 end
 

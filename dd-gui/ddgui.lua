@@ -65,21 +65,68 @@ D.setRadiobutton            = radiobutton.setRadiobutton
 D.clearRadiogroup           = radiobutton.clearRadiogroup
 D.getSelectedInGroup        = radiobutton.getSelectedInGroup
 
--- Shared variables (if needed)
+-- Shared variables
+--
+-- The colors of the widgets: a dark, flat look with white text. The scripts
+-- tint the widgets' images with these (gui.set_color), so a color can be
+-- changed here - or from your own script, before the first widget is drawn -
+-- without touching the images. The images are white where the color is to show
+-- at full strength (frames, the line under a text box) and grey where it is to
+-- be darker (the fill), see dd-gui/images.
+--
+-- NOTE: the prefabs (dd-gui/prefabs/*.gui) carry the idle colors too, because
+-- that is what is shown until the first input reaches the gui. If you change
+-- active, field, box, row, track, panel or text, change the prefabs as well.
 D.colors = {
-	active		= vmath.vector4(1, 1, 1, 1),
-	hover		= vmath.vector4(0.85, 0.85, 0.85, 1),
-	select		= vmath.vector4(0.8, 0.8, 0.8, 0.95),
-	inactive	= vmath.vector4(0.3, 0.3, 0.3, 0.5),
+	-- Buttons
+	active		= vmath.vector4(0.33, 0.33, 0.33, 1),	-- idle
+	hover		= vmath.vector4(0.42, 0.42, 0.42, 1),	-- the pointer is on it
+	select		= vmath.vector4(0.50, 0.50, 0.50, 1),	-- held down
+	inactive	= vmath.vector4(0.27, 0.27, 0.27, 0.6),	-- disabled
+	-- The accent: accent buttons, a toggle button that is on, a ticked checkbox,
+	-- the level of a slider, the arrow of a combobox
 	accent		= vmath.vector4(0.17, 0.50, 0.79, 1),
-	accenthover	= vmath.vector4(0.17, 0.50, 0.79, 0.8),
+	accenthover	= vmath.vector4(0.27, 0.59, 0.87, 1),
+	accentselect	= vmath.vector4(0.38, 0.67, 0.93, 1),
+	-- Text
+	text		= vmath.vector4(1, 1, 1, 1),
+	text_inactive	= vmath.vector4(1, 1, 1, 0.38),		-- disabled, placeholders
+	-- Text boxes and the box of a combobox (images/field.png)
+	field		= vmath.vector4(0.58, 0.58, 0.58, 1),
+	field_hover	= vmath.vector4(0.72, 0.72, 0.72, 1),	-- the pointer is on it, or it has the focus
+	field_inactive	= vmath.vector4(0.42, 0.42, 0.42, 0.5),
+	-- Checkbox and radio button, not ticked (images/checkbox.png, radio.png)
+	box		= vmath.vector4(0.66, 0.66, 0.66, 1),
+	box_hover	= vmath.vector4(0.90, 0.90, 0.90, 1),
+	box_inactive	= vmath.vector4(0.40, 0.40, 0.40, 0.5),
+	-- The rows of a dropdown list. The list keeps track of its rows by their
+	-- color, so these three must differ from each other.
+	row		= vmath.vector4(0.14, 0.14, 0.14, 1),
+	row_hover	= vmath.vector4(0.27, 0.27, 0.27, 1),	-- the row the pointer or the arrow keys are on
+	row_select	= vmath.vector4(0.34, 0.34, 0.34, 1),	-- the pointer is on the chosen row
+	-- The track of a slider, the background of a text block
+	track		= vmath.vector4(0.36, 0.36, 0.36, 1),
+	panel		= vmath.vector4(0.15, 0.15, 0.15, 1),
+	panel_inactive	= vmath.vector4(0.15, 0.15, 0.15, 0.5),
+	-- For marking an answer from your own script (see D.mark)
+	correct		= vmath.vector4(0.30, 0.78, 0.36, 1),
+	wrong		= vmath.vector4(0.92, 0.32, 0.30, 1),
+	-- Plain colors
 	green		= vmath.vector4(0.1, 1, 0.1, 1),
 	red			= vmath.vector4(1, 0.1, 0.1, 1),
 	black		= vmath.vector4(0, 0, 0,  1),
 	white		= vmath.vector4(1, 1, 1,  1)
 }
 
+-- True on phones and tablets (set by D.check_device, which runs when this module is loaded)
 D.isMobileDevice = false
+-- True while the pointer is a finger: on a mobile device, or when the last input came from a touch screen
+D.touchInput = false
+-- Touch screens: small controls (checkbox, radio button, the handle and the track
+-- of a slider) can be hit this far outside their edges. 0 turns it off.
+D.touchPadding = 10
+-- A dropdown list that is dragged further than this is being scrolled: the release does not choose a row.
+D.dragThreshold = 10
 D.scrollSpeed = 18
 D.textMagnification = 0.75
 D.nodes = {}
@@ -120,6 +167,7 @@ end
 -- Programmatically give focus to a textbox node (single-line or multi-line).
 -- Activates the pulsating marker so keyboard input is routed to that node.
 function D.focusNode(self, node)
+	self.ddStarted = true -- see with_touch: the focus set here is this scene's own
 	D.nodes["active"] = node
 	D.nodes["tab"]    = true  -- triggers the multiline path to sync the marker
 end
@@ -148,13 +196,158 @@ function D.getEnabled(self, node)
 	return true
 end
 
+-- Give the widgets another accent color (accent buttons, a toggle button that is
+-- on, a ticked checkbox, the level of a slider, the arrow of a combobox). The
+-- hover and pressed variants are made from it. Call it in init(), before the
+-- first widget call - D is shared, so the scene that comes next must set its own.
+--   D.setAccent(vmath.vector4(0.85, 0.64, 0.25, 1))
+function D.setAccent(color)
+	local function lighter(amount)
+		return vmath.vector4(color.x + (1 - color.x) * amount, color.y + (1 - color.y) * amount, color.z + (1 - color.z) * amount, 1)
+	end
+	D.colors.accent = vmath.vector4(color.x, color.y, color.z, 1)
+	D.colors.accenthover = lighter(0.14)
+	D.colors.accentselect = lighter(0.28)
+end
+
+-- Mark a widget as a correct or wrong answer (or with any color), or take the
+-- mark away. Call it AFTER the widget's own call in on_input - the widget sets
+-- its normal color every time it runs.
+--   D.mark(self, "answer", "correct")          -- or "wrong", or a vmath.vector4
+--   D.mark(self, "answer", "wrong", true)      -- dimmed, for a locked answer
+--   D.mark(self, "answer", nil)                -- no mark: nothing is changed
+-- Works for text boxes, comboboxes, auto-suggest boxes, checkboxes and radio buttons.
+function D.mark(self, node, state, dimmed)
+	if state == nil then
+		return
+	end
+	local color = D.colors[state] or state
+	if dimmed then
+		color = vmath.vector4(color.x, color.y, color.z, color.w * 0.5)
+	end
+	-- the box of a combobox is called "textbox", everything else is tinted on "bg"
+	local ok, target = pcall(gui.get_node, node .. "/textbox")
+	if not ok then
+		target = gui.get_node(node .. "/bg")
+	end
+	gui.set_color(target, color)
+end
+
 -- Function to set localization strings
 function D.set_localization_strings(no_entries_str, select_value_str)
 	D.no_entries = no_entries_str
 	D.select_a_value = select_value_str
 end
 
--- Function to check device type (if needed)
+-- ---------------------------------------------------------------------------
+-- Pointer and touch
+-- ---------------------------------------------------------------------------
+
+-- Where the pointer "is" when the finger has left the screen.
+local AWAY = { x = -100000, y = -100000 }
+local TOUCH = hash("touch")
+
+-- Remember where the pointer is. Every widget calls this first.
+function D.pointer(action)
+	if action ~= nil and action.x ~= nil then
+		D.currentMousePos.x = action.x
+		D.currentMousePos.y = action.y
+		if action ~= AWAY then
+			D.touchInput = D.isMobileDevice or action.touch ~= nil
+		end
+	end
+end
+
+-- Is (x, y) within pad_x / pad_y of the node? Tested with the node's own
+-- picking at points around (x, y), so it follows the node's scale and rotation.
+local function pick_padded(node, x, y, pad_x, pad_y)
+	local size = gui.get_size(node)
+	local nx = pad_x > 0 and math.ceil(pad_x / math.max(math.abs(size.x), 1)) or 0
+	local ny = pad_y > 0 and math.ceil(pad_y / math.max(math.abs(size.y), 1)) or 0
+	for ix = -nx, nx do
+		for iy = -ny, ny do
+			local px = nx > 0 and x + pad_x * ix / nx or x
+			local py = ny > 0 and y + pad_y * iy / ny or y
+			if gui.pick_node(node, px, py) then
+				return true
+			end
+		end
+	end
+	return false
+end
+
+-- Is the pointer on the node or within pad_x / pad_y of it? (Mouse and touch alike.)
+function D.pickNear(node, pad_x, pad_y)
+	return pick_padded(node, D.currentMousePos.x, D.currentMousePos.y, pad_x or 0, pad_y or 0)
+end
+
+-- Is the pointer on the node? For the small controls. With a mouse this is
+-- gui.pick_node. With a finger the node can also be hit a little outside its
+-- edges (D.touchPadding, or pad_x / pad_y) - unless the finger is right on
+-- another small control, which then keeps its touch.
+function D.pick(self, node, pad_x, pad_y)
+	local x, y = D.currentMousePos.x, D.currentMousePos.y
+	local id = gui.get_id(node)
+	self.ddTouchTargets = self.ddTouchTargets or {}
+	self.ddTouchTargets[id] = node
+	if gui.pick_node(node, x, y) then
+		return true
+	end
+	if not D.touchInput then
+		return false
+	end
+	pad_x = pad_x or D.touchPadding
+	pad_y = pad_y or D.touchPadding
+	if (pad_x <= 0 and pad_y <= 0) or not pick_padded(node, x, y, pad_x, pad_y) then
+		return false
+	end
+	for other_id, other in pairs(self.ddTouchTargets) do
+		if other_id ~= id then
+			-- pcall: the node may have been deleted since it was last used
+			local ok, hit = pcall(function()
+				return gui.pick_node(other, x, y) and gui.is_enabled(other, true)
+			end)
+			if ok and hit then
+				return false
+			end
+		end
+	end
+	return true
+end
+
+-- A finger does not hover: when it is lifted the pointer is gone, while a mouse
+-- stays where it was. Without this a widget would keep its hover color and its
+-- tooltip after a tap, and keep the focus so that the next tap on another
+-- widget is lost. So after a release from a touch screen the widget is run once
+-- more with the pointer far away - just what happens when a mouse is moved off it.
+local function with_touch(widget)
+	return function(self, action_id, action, ...)
+		-- The first widget call of a gui scene: a focus that is still set belongs to
+		-- a scene that was left (a collection proxy that was unloaded while a text box
+		-- had the focus, say) and would lock every widget of this one. D is shared by
+		-- all scripts when shared_state is on, so nobody else clears it.
+		if self.ddStarted == nil then
+			self.ddStarted = true
+			D.nodes["active"] = nil
+			D.nodes["tab"] = false
+		end
+		D.pointer(action)
+		local value, changed = widget(self, action_id, action, ...)
+		if action_id == TOUCH and action ~= nil and action.released and D.touchInput then
+			widget(self, nil, AWAY, ...)
+		end
+		return value, changed
+	end
+end
+
+for _, name in ipairs({
+	"button", "togglebutton", "checkbox", "checkboxSelectall", "radiobutton", "textbox",
+	"textboxMultiline", "slider", "combobox", "auto_suggestbox", "textblock",
+}) do
+	D[name] = with_touch(D[name])
+end
+
+-- Function to check device type. Runs when the module is loaded; call it again if you need to.
 function D.check_device(self)
 	local info = sys.get_sys_info()
 	local user_agent = info.user_agent or ""
@@ -228,11 +421,11 @@ function D.valuelimit(v, min, max)
 	return v
 end
 
--- Pulsation of markers
+-- Pulsation of markers: the text color, fading out and in
 function D.pulsate(node)
-	local current_color = D.colors.hover
-	local target_color = vmath.vector4(current_color.x, current_color.y, current_color.z, 1)
-	gui.set_color(node, D.colors.black)
+	local current_color = D.colors.text
+	local target_color = vmath.vector4(current_color.x, current_color.y, current_color.z, 0.15)
+	gui.set_color(node, current_color)
 	gui.animate(node, gui.PROP_COLOR, target_color, gui.EASING_INOUTSINE, pulsate_duration, 0, nil, gui.PLAYBACK_LOOP_PINGPONG)
 end
 
@@ -240,5 +433,7 @@ function D.stop_pulsate(node)
 	-- Function to stop the pulsating effect
 	gui.cancel_animations(node, gui.PROP_COLOR) -- Cancel all animations on color, not just loop
 end
+
+D.check_device()
 
 return D

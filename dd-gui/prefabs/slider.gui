@@ -19,7 +19,12 @@ nodes {
 nodes {
   size {
     x: 200.0
-    y: 10.0
+    y: 4.0
+  }
+  color {
+    x: 0.36
+    y: 0.36
+    z: 0.36
   }
   type: TYPE_BOX
   id: "slider_bg"
@@ -32,7 +37,7 @@ nodes {
   }
   size {
     x: 100.0
-    y: 10.0
+    y: 4.0
   }
   color {
     x: 0.169
@@ -47,11 +52,11 @@ nodes {
 }
 nodes {
   size {
-    x: 25.0
-    y: 25.0
+    x: 18.0
+    y: 18.0
   }
   type: TYPE_BOX
-  texture: "UI/radio"
+  texture: "UI/knob"
   id: "handle"
   parent: "bg"
   inherit_alpha: true
@@ -67,24 +72,24 @@ nodes {
     z: 0.788
   }
   type: TYPE_BOX
-  texture: "UI/radio"
+  texture: "UI/knob"
   id: "accent"
   parent: "handle"
   inherit_alpha: true
 }
 nodes {
   position {
-    y: 37.0
+    y: 28.0
     z: 1.0
   }
   size {
     x: 200.0
-    y: 30.0
+    y: 24.0
   }
   color {
-    x: 0.302
-    y: 0.302
-    z: 0.302
+    x: 0.1
+    y: 0.1
+    z: 0.1
   }
   type: TYPE_BOX
   id: "txtbox"
@@ -96,7 +101,7 @@ nodes {
 nodes {
   size {
     x: 190.0
-    y: 30.0
+    y: 24.0
   }
   color {
     x: 0.902

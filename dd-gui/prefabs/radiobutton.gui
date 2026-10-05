@@ -11,6 +11,11 @@ nodes {
     x: 30.0
     y: 30.0
   }
+  color {
+    x: 0.66
+    y: 0.66
+    z: 0.66
+  }
   type: TYPE_BOX
   texture: "dropdown/radio"
   id: "bg"

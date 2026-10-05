@@ -14,7 +14,7 @@ high_dpi = 1
 
 [project]
 title = DD-GUI
-version = 0.4.1
+version = 0.5.0
 publisher = Skogsheden Radiologikonsult AB
 developer = Nils Gustafsson
 bundle_resources = /dd-gui/
@@ -32,4 +32,9 @@ scale_mode = downscale_fit
 max_font_batches = 256
 default_texture_min_filter = linear_mipmap_linear
 default_texture_mag_filter = linear
+
+[render]
+clear_color_red = 0.2
+clear_color_green = 0.2
+clear_color_blue = 0.2
 

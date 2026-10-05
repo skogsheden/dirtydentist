@@ -11,8 +11,13 @@ nodes {
     x: 30.0
     y: 30.0
   }
+  color {
+    x: 0.66
+    y: 0.66
+    z: 0.66
+  }
   type: TYPE_BOX
-  texture: "dropdown/button"
+  texture: "dropdown/checkbox"
   id: "bg"
   layer: "bg"
   inherit_alpha: true
@@ -46,9 +51,9 @@ nodes {
     y: 30.0
   }
   color {
-    x: 0.302
-    y: 0.302
-    z: 0.302
+    x: 0.1
+    y: 0.1
+    z: 0.1
   }
   type: TYPE_BOX
   id: "txtbox"

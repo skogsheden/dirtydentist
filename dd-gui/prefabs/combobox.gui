@@ -11,8 +11,13 @@ nodes {
     x: 200.0
     y: 30.0
   }
+  color {
+    x: 0.58
+    y: 0.58
+    z: 0.58
+  }
   type: TYPE_BOX
-  texture: "dropdown/button"
+  texture: "dropdown/field"
   id: "textbox"
   layer: "bg"
   inherit_alpha: true
@@ -49,11 +54,6 @@ nodes {
   size {
     x: 180.0
     y: 30.0
-  }
-  color {
-    x: 0.0
-    y: 0.0
-    z: 0.0
   }
   type: TYPE_TEXT
   text: "<placeholder>"
@@ -136,6 +136,11 @@ nodes {
     x: 160.0
     y: 30.0
   }
+  color {
+    x: 0.14
+    y: 0.14
+    z: 0.14
+  }
   type: TYPE_BOX
   texture: "dropdown/bg_blank"
   id: "button"
@@ -157,11 +162,6 @@ nodes {
   size {
     x: 140.0
     y: 30.0
-  }
-  color {
-    x: 0.0
-    y: 0.0
-    z: 0.0
   }
   type: TYPE_TEXT
   text: "<button>"
@@ -213,9 +213,9 @@ nodes {
     y: 10.0
   }
   color {
-    x: 0.2
-    y: 0.2
-    z: 0.2
+    x: 0.6
+    y: 0.6
+    z: 0.6
   }
   type: TYPE_BOX
   id: "dragpos"

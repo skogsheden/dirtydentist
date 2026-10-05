@@ -28,7 +28,7 @@ end
 -- Apply checked/unchecked visual state (enabled appearance).
 local function applyCheckState(bgNode, checkNode, value)
 	gui.set_enabled(checkNode, value)
-	gui.set_color(bgNode, value and D.colors.accent or D.colors.active)
+	gui.set_color(bgNode, value and D.colors.accent or D.colors.box)
 end
 
 -- Show and size the hover tooltip box next to a checkbox.
@@ -56,7 +56,7 @@ function M.initializeCheckbox(self, node, value, enabled)
 		applyCheckState(bgNode, checkNode, value)
 	else
 		gui.set_enabled(checkNode, false)
-		gui.set_color(bgNode, D.colors.inactive)
+		gui.set_color(bgNode, D.colors.box_inactive)
 		self.checkbox[node].enabled = false
 	end
 end
@@ -72,16 +72,13 @@ function M.clearCheckbox (self, node)
 	self.checkbox[node].value     = false
 	self.checkbox[node].lastValue = false  -- prevent spurious changed after clear
 	gui.set_enabled(checkNode, false)
-	gui.set_color(bgNode, D.colors.active)
+	gui.set_color(bgNode, D.colors.box)
 	gui.set_enabled(txtBox, false)
 end
 
 
 function M.checkbox(self, action_id, action, node, enabled, standard_value, text)
-	if action ~= nil and action.x ~= nil then
-		D.currentMousePos.x = action.x
-		D.currentMousePos.y = action.y
-	end
+	D.pointer(action)
 	
 	-- Load nodes
 	local bgNode = gui.get_node(node .. "/bg")
@@ -107,40 +104,41 @@ function M.checkbox(self, action_id, action, node, enabled, standard_value, text
 		applyCheckState(bgNode, checkNode, self.checkbox[node].value)
 	else
 		gui.set_enabled(checkNode, false)
-		gui.set_color(bgNode, D.colors.inactive)
+		gui.set_color(bgNode, D.colors.box_inactive)
 	end
 
-	-- Check if hovering above
-	if gui.pick_node(bgNode, D.currentMousePos.x, D.currentMousePos.y) and enabled and (D.nodes["active"]== nil or D.nodes["active"] == node) then
+	-- Check if hovering above (on a touch screen the hit area is a little larger than the box)
+	local over = D.pick(self, bgNode)
+	if over and enabled and (D.nodes["active"]== nil or D.nodes["active"] == node) then
 		-- Set as active node
 		D.nodes["active"] = node
 		if self.checkbox[node].value then
 			gui.set_color(bgNode, D.colors.accenthover)
 		else
-			gui.set_color(bgNode, D.colors.hover)
+			gui.set_color(bgNode, D.colors.box_hover)
 		end
 		showTooltip(txtBox, txtNode, text)
 		-- When pressed check if to be activated or deactivated
 		if action_id == hash("touch") and action.pressed and self.checkbox[node].value then
 			self.checkbox[node].value = false
 			gui.set_enabled(checkNode, false)
-			gui.set_color(bgNode, D.colors.hover)
+			gui.set_color(bgNode, D.colors.box_hover)
 		elseif action_id == hash("touch") and action.pressed and self.checkbox[node].value ~= true then
 			self.checkbox[node].value = true
 			gui.set_enabled(checkNode, true)
 			gui.set_color(bgNode, D.colors.accenthover)
 		end
-	elseif enabled and not gui.pick_node(bgNode, D.currentMousePos.x, D.currentMousePos.y) and D.nodes["active"] == node then
+	elseif enabled and not over and D.nodes["active"] == node then
 		gui.set_enabled(txtBox, false)
-		gui.set_color(bgNode, D.colors.active)
+		gui.set_color(bgNode, D.colors.box)
 		D.nodes["active"] = nil
 		if self.checkbox[node].value then
 			gui.set_color(bgNode, D.colors.accent)
 		else
-			gui.set_color(bgNode, D.colors.active)
+			gui.set_color(bgNode, D.colors.box)
 		end
 	elseif enabled == false then
-		gui.set_color(bgNode, D.colors.inactive)
+		gui.set_color(bgNode, D.colors.box_inactive)
 		if self.selectedNode == node then
 			D.nodes["active"] = nil
 		end
@@ -156,6 +154,8 @@ function M.checkbox(self, action_id, action, node, enabled, standard_value, text
 end
 
 function M.checkboxSelectall(self, action_id, action, node, othernodes, enabled, standard_value, text)
+	D.pointer(action)
+
 	-- Load nodes
 	local bgNode = gui.get_node(node .. "/bg")
 	local checkNode = gui.get_node(node .. "/check")
@@ -187,7 +187,7 @@ function M.checkboxSelectall(self, action_id, action, node, othernodes, enabled,
 				else
 					self.checkbox[othernodes[i]].value = false
 					gui.set_enabled(otherCheck, false)
-					gui.set_color(otherBg, D.colors.inactive)
+					gui.set_color(otherBg, D.colors.box_inactive)
 				end
 			end
 		end
@@ -216,18 +216,19 @@ function M.checkboxSelectall(self, action_id, action, node, othernodes, enabled,
 		else
 			gui.set_enabled(checkNode, false)
 			self.checkbox[node].value = false
-			gui.set_color(bgNode, D.colors.active)
+			gui.set_color(bgNode, D.colors.box)
 		end
 	end
 
-	-- Check if hovering above
-	if gui.pick_node(bgNode, D.currentMousePos.x, D.currentMousePos.y) and (D.nodes["active"]  == nil or D.nodes["active"]  == node) and enabled then
+	-- Check if hovering above (on a touch screen the hit area is a little larger than the box)
+	local over = D.pick(self, bgNode)
+	if over and (D.nodes["active"]  == nil or D.nodes["active"]  == node) and enabled then
 		-- Set as active node
 		D.nodes["active"] = node
 		if self.checkbox[node].value then
 			gui.set_color(bgNode, D.colors.accenthover)
 		else
-			gui.set_color(bgNode, D.colors.hover)
+			gui.set_color(bgNode, D.colors.box_hover)
 		end
 
 		showTooltip(txtBox, txtNode, text)
@@ -235,14 +236,14 @@ function M.checkboxSelectall(self, action_id, action, node, othernodes, enabled,
 		if action_id == hash("touch") and action.pressed and self.checkbox[node].value then
 			self.checkbox[node].value = false
 			gui.set_enabled(checkNode, false)
-			gui.set_color(bgNode, D.colors.hover)
+			gui.set_color(bgNode, D.colors.box_hover)
 			-- Deactivate all other
 			for i = 1, #othernodes do
 				local otherBgNode = gui.get_node(othernodes[i] .. "/bg")
 				local otherCheckNode = gui.get_node(othernodes[i] .. "/check")
 				self.checkbox[othernodes[i]].value = false
 				gui.set_enabled(otherCheckNode, false)
-				gui.set_color(otherBgNode, D.colors.active)
+				gui.set_color(otherBgNode, D.colors.box)
 			end
 		elseif action_id == hash("touch") and action.pressed and self.checkbox[node].value ~= true then
 			self.checkbox[node].value = true
@@ -257,17 +258,17 @@ function M.checkboxSelectall(self, action_id, action, node, othernodes, enabled,
 				gui.set_color(otherBgNode, D.colors.accent)
 			end
 		end
-	elseif enabled and not gui.pick_node(bgNode, D.currentMousePos.x, D.currentMousePos.y) and D.nodes["active"] == node then
+	elseif enabled and not over and D.nodes["active"] == node then
 		gui.set_enabled(txtBox, false)
-		gui.set_color(bgNode, D.colors.active)
+		gui.set_color(bgNode, D.colors.box)
 		D.nodes["active"] = nil
 		if self.checkbox[node].value then
 			gui.set_color(bgNode, D.colors.accent)
 		else
-			gui.set_color(bgNode, D.colors.active)
+			gui.set_color(bgNode, D.colors.box)
 		end
 	elseif enabled == false then
-		gui.set_color(bgNode, D.colors.inactive)
+		gui.set_color(bgNode, D.colors.box_inactive)
 		if D.nodes["active"]  == node then
 			D.nodes["active"] = nil
 		end

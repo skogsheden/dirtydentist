@@ -13,9 +13,9 @@ local function initTextblock(self, node)
 	if not self.textboxData[node].init then
 		-- Check if active
 		if self.textboxData[node].active then
-			gui.set_color(bgNode, D.colors.active)
+			gui.set_color(bgNode, D.colors.panel)
 		elseif not self.textboxData[node].active then
-			gui.set_color(bgNode, D.colors.inactive)
+			gui.set_color(bgNode, D.colors.panel_inactive)
 		end
 		-- Atelast same size as bg
 		gui.set_position(carrier, vmath.vector3(0,0,0))
@@ -71,10 +71,7 @@ function M.setTextblock(self, node, text)
 end
 
 function M.textBlock(self, action_id, action, node, enabled)
-	if action ~= nil and action.x ~= nil then
-		D.currentMousePos.x = action.x
-		D.currentMousePos.y = action.y
-	end
+	D.pointer(action)
 	
 	-- Load nodes
 	local bgNode = gui.get_node(node .. "/bg")
@@ -92,15 +89,15 @@ function M.textBlock(self, action_id, action, node, enabled)
 
 	-- Hovering and enabled
 	if gui.pick_node(bgNode, D.currentMousePos.x, D.currentMousePos.y) and self.textboxData[node].active and D.nodes["active"] == nil then
-		gui.set_color(bgNode, D.colors.active)
+		gui.set_color(bgNode, D.colors.panel)
 		D.nodes["active"] = node
 	elseif not self.textboxData[node].scroll.active and not gui.pick_node(bgNode, D.currentMousePos.x, D.currentMousePos.y) and self.textboxData[node].active and D.nodes["active"] == node then
-		gui.set_color(bgNode, D.colors.active)
+		gui.set_color(bgNode, D.colors.panel)
 		D.nodes["active"] = nil
 	elseif not self.textboxData[node].active then
-		gui.set_color(bgNode, D.colors.inactive)
+		gui.set_color(bgNode, D.colors.panel_inactive)
 	else
-		gui.set_color(bgNode, D.colors.active)
+		gui.set_color(bgNode, D.colors.panel)
 	end
 	initTextblock(self, node)
 
@@ -113,7 +110,7 @@ function M.textBlock(self, action_id, action, node, enabled)
 			self.textboxData[node].scroll.active = false
 			-- Reset if outside node
 			if not gui.pick_node(bgNode, D.currentMousePos.x, D.currentMousePos.y) then
-				gui.set_color(bgNode, D.colors.active)
+				gui.set_color(bgNode, D.colors.panel)
 				D.nodes["active"] = nil
 			end
 		end

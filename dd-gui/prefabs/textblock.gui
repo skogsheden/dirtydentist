@@ -11,6 +11,11 @@ nodes {
     x: 200.0
     y: 90.0
   }
+  color {
+    x: 0.15
+    y: 0.15
+    z: 0.15
+  }
   type: TYPE_BOX
   texture: "dropdown/button"
   id: "bg"
@@ -45,11 +50,6 @@ nodes {
   size {
     x: 182.0
     y: 20.0
-  }
-  color {
-    x: 0.0
-    y: 0.0
-    z: 0.0
   }
   type: TYPE_TEXT
   text: "akmdjksa\n"
@@ -87,9 +87,9 @@ nodes {
     y: 10.0
   }
   color {
-    x: 0.2
-    y: 0.2
-    z: 0.2
+    x: 0.6
+    y: 0.6
+    z: 0.6
   }
   type: TYPE_BOX
   id: "dragpos"

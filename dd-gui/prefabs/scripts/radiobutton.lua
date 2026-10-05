@@ -4,10 +4,7 @@
 local M = {}
 
 function M.radiobutton(self, action_id, action, node, enabled, group)
-	if action ~= nil and action.x ~= nil then
-		D.currentMousePos.x = action.x
-		D.currentMousePos.y = action.y
-	end
+	D.pointer(action)
 	
 	-- Load nodes
 	local bgNode = gui.get_node(node .. "/bg")
@@ -17,21 +14,22 @@ function M.radiobutton(self, action_id, action, node, enabled, group)
 	self.radiobutton = self.radiobutton or {}
 	self.selectedNode = D.nodes["active"] or nil
 
-	-- Check if hovering above
-	if gui.pick_node(bgNode, D.currentMousePos.x, D.currentMousePos.y) and enabled and (self.selectedNode == nil or self.selectedNode == node) then
+	-- Check if hovering above (on a touch screen the hit area is a little larger than the button)
+	local over = D.pick(self, bgNode)
+	if over and enabled and (self.selectedNode == nil or self.selectedNode == node) then
 		-- Set as active node
 		D.nodes["active"] = node
 		if self.radiobutton[node] then
 			gui.set_color(bgNode, D.colors.accenthover)
 		else
-			gui.set_color(bgNode, D.colors.hover)
+			gui.set_color(bgNode, D.colors.box_hover)
 		end
 
 		-- When pressed check if to be activated or deactivated
 		if action_id == hash("touch") and action.pressed and self.radiobutton[node] then
 			self.radiobutton[node] = false
 			gui.set_enabled(centerNode, false)
-			gui.set_color(bgNode, D.colors.hover)
+			gui.set_color(bgNode, D.colors.box_hover)
 		elseif action_id == hash("touch") and action.pressed and self.radiobutton[node] ~= true then
 			self.radiobutton[node] = true
 			gui.set_enabled(centerNode, true)
@@ -44,21 +42,21 @@ function M.radiobutton(self, action_id, action, node, enabled, group)
 					local otherCenterNode = gui.get_node(group[i] .. "/center")
 					self.radiobutton[group[i]] = false
 					gui.set_enabled(otherCenterNode, false)
-					gui.set_color(otherBgNode, D.colors.active)
+					gui.set_color(otherBgNode, D.colors.box)
 				end
 			end
 		end
 		gui.set_scale(centerNode, vmath.vector3(1.5,1.5,1))
-	elseif enabled and not gui.pick_node(bgNode, D.currentMousePos.x, D.currentMousePos.y) and self.selectedNode == node then
+	elseif enabled and not over and self.selectedNode == node then
 		D.nodes["active"] = nil
 		if self.radiobutton[node] then
 			gui.set_color(bgNode, D.colors.accent)
 		else
-			gui.set_color(bgNode, D.colors.active)
+			gui.set_color(bgNode, D.colors.box)
 		end
 		gui.set_scale(centerNode, vmath.vector3(1,1,1))
 	elseif enabled == false then
-		gui.set_color(bgNode, D.colors.inactive)
+		gui.set_color(bgNode, D.colors.box_inactive)
 		gui.set_scale(centerNode, vmath.vector3(1, 1, 1))
 		if self.selectedNode == node then
 			D.nodes["active"] = nil
@@ -68,7 +66,7 @@ function M.radiobutton(self, action_id, action, node, enabled, group)
 		if self.radiobutton[node] then
 			gui.set_color(bgNode, D.colors.accent)
 		else
-			gui.set_color(bgNode, D.colors.active)
+			gui.set_color(bgNode, D.colors.box)
 		end
 	end
 	--return value
@@ -92,13 +90,13 @@ function M.initializeRadiobutton(self, node, value, enabled)
 
 	gui.set_scale(centerNode, vmath.vector3(1, 1, 1))
 	if enabled == false then
-		gui.set_color(bgNode, D.colors.inactive)
+		gui.set_color(bgNode, D.colors.box_inactive)
 		gui.set_enabled(centerNode, false)
 	elseif self.radiobutton[node] then
 		gui.set_color(bgNode, D.colors.accent)
 		gui.set_enabled(centerNode, true)
 	else
-		gui.set_color(bgNode, D.colors.active)
+		gui.set_color(bgNode, D.colors.box)
 		gui.set_enabled(centerNode, false)
 	end
 end
@@ -123,14 +121,14 @@ function M.setRadiobutton(self, node, value, group)
 					local otherCenter = gui.get_node(group[i] .. "/center")
 					self.radiobutton[group[i]] = false
 					self.radiobutton[group[i] .. "_prev"] = false
-					gui.set_color(otherBg, D.colors.active)
+					gui.set_color(otherBg, D.colors.box)
 					gui.set_enabled(otherCenter, false)
 					gui.set_scale(otherCenter, vmath.vector3(1, 1, 1))
 				end
 			end
 		end
 	else
-		gui.set_color(bgNode, D.colors.active)
+		gui.set_color(bgNode, D.colors.box)
 		gui.set_enabled(centerNode, false)
 	end
 	self.radiobutton[node .. "_prev"] = value -- prevent spurious changed
@@ -144,7 +142,7 @@ function M.clearRadiogroup(self, group)
 		local centerNode = gui.get_node(group[i] .. "/center")
 		self.radiobutton[group[i]] = false
 		self.radiobutton[group[i] .. "_prev"] = false
-		gui.set_color(bgNode, D.colors.active)
+		gui.set_color(bgNode, D.colors.box)
 		gui.set_enabled(centerNode, false)
 		gui.set_scale(centerNode, vmath.vector3(1, 1, 1))
 	end

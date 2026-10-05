@@ -72,10 +72,7 @@ end
 -- maxlength   : maximum number of UTF-8 characters allowed (optional, nil = unlimited)
 -- readonly    : when true the field cannot be focused or edited (optional)
 function M.textbox(self, action_id, action, node, enabled, tab_to, placeholder, maxlength, readonly)
-	if action ~= nil and action.x ~= nil then
-		D.currentMousePos.x = action.x
-		D.currentMousePos.y = action.y
-	end
+	D.pointer(action)
 	
 	-- Load nodes
 	local bgNode = gui.get_node(node .. "/bg")
@@ -95,16 +92,14 @@ function M.textbox(self, action_id, action, node, enabled, tab_to, placeholder, 
 	-- Display placeholder when field is empty and not focused
 	if placeholder and self.textboxData[node].text == "" and D.nodes["active"] ~= node then
 		gui.set_text(textNode, placeholder)
-		gui.set_color(textNode, D.colors.inactive)
+		gui.set_color(textNode, D.colors.text_inactive)
 	else
 		gui.set_text(textNode, self.textboxData[node].text)
-		if placeholder then
-			gui.set_color(textNode, D.colors.black)
-		end
+		gui.set_color(textNode, enabled and D.colors.text or D.colors.text_inactive)
 	end
 
 	if gui.pick_node(bgNode, D.currentMousePos.x, D.currentMousePos.y) and self.textboxData[node].enabled then
-		gui.set_color(bgNode, D.colors.hover)
+		gui.set_color(bgNode, D.colors.field_hover)
 		if action_id == hash("touch") and action.pressed and gui.pick_node(bgNode, D.currentMousePos.x, D.currentMousePos.y) and D.nodes["active"] == nil and not readonly then
 			D.nodes["active"] = node
 			D.nodes["tab"] = false
@@ -114,11 +109,11 @@ function M.textbox(self, action_id, action, node, enabled, tab_to, placeholder, 
 			D.pulsate(markerNode)
 		end
 	elseif not gui.pick_node(bgNode, D.currentMousePos.x, D.currentMousePos.y) and self.textboxData[node].enabled and D.nodes["active"] == node then
-		gui.set_color(bgNode, D.colors.hover)
+		gui.set_color(bgNode, D.colors.field_hover)
 		if action_id == hash("touch") and action.pressed then
 			D.nodes["active"] = nil
 			D.nodes["tab"] = false
-			gui.set_color(bgNode, D.colors.active)
+			gui.set_color(bgNode, D.colors.field)
 			gui.set_enabled(markerNode, false)
 			D.stop_pulsate(markerNode)
 			if D.isMobileDevice then
@@ -126,9 +121,9 @@ function M.textbox(self, action_id, action, node, enabled, tab_to, placeholder, 
 			end
 		end
 	elseif not gui.pick_node(bgNode, D.currentMousePos.x, D.currentMousePos.y) and self.textboxData[node].enabled and D.nodes["active"] ~= node then
-		gui.set_color(bgNode, D.colors.active)
+		gui.set_color(bgNode, D.colors.field)
 	elseif not self.textboxData[node].enabled then
-		gui.set_color(bgNode, D.colors.inactive)
+		gui.set_color(bgNode, D.colors.field_inactive)
 		if D.nodes["active"] == node then
 			D.nodes["active"] = nil
 			D.stop_pulsate(markerNode)
@@ -138,7 +133,7 @@ function M.textbox(self, action_id, action, node, enabled, tab_to, placeholder, 
 	-- If tab to
 	if action_id == hash("tab") and action.pressed and tab_to ~= nil and D.nodes["tab"] == false and D.nodes["active"] == node then
 		D.nodes["active"] = tab_to
-		gui.set_color(bgNode, D.colors.active)
+		gui.set_color(bgNode, D.colors.field)
 		gui.set_enabled(markerNode, false)
 		D.stop_pulsate(markerNode)
 		D.nodes["tab"] = true
@@ -366,10 +361,7 @@ end
 
 -- Main function for textbox multiline
 function M.textboxMultiline(self, action_id, action, node, enabled, tab_to)
-	if action ~= nil and action.x ~= nil then
-		D.currentMousePos.x = action.x
-		D.currentMousePos.y = action.y
-	end
+	D.pointer(action)
 	
 	-- Load nodes
 	local bgNode = gui.get_node(node .. "/bg")
@@ -393,7 +385,7 @@ function M.textboxMultiline(self, action_id, action, node, enabled, tab_to)
 	sizeFix(self, node)
 
 	if gui.pick_node(bgNode, D.currentMousePos.x, D.currentMousePos.y) and enabled then
-		gui.set_color(bgNode, D.colors.hover)
+		gui.set_color(bgNode, D.colors.field_hover)
 		if action_id == hash("touch") and action.pressed and gui.pick_node(bgNode, D.currentMousePos.x, D.currentMousePos.y) and (D.nodes["active"] == nil or D.nodes["active"] == node) then
 			D.nodes["active"], self.selectedNode = node, node
 			D.nodes["tab"] = false
@@ -402,10 +394,10 @@ function M.textboxMultiline(self, action_id, action, node, enabled, tab_to)
 			end
 		end
 	elseif not gui.pick_node(bgNode, D.currentMousePos.x, D.currentMousePos.y) and self.textboxData[node].enabled and D.nodes["active"] == node then
-		gui.set_color(bgNode, D.colors.hover)
+		gui.set_color(bgNode, D.colors.field_hover)
 		if action_id == hash("touch") and action.pressed then
 			D.nodes["active"], self.selectedNode = nil, nil
-			gui.set_color(bgNode, D.colors.active)
+			gui.set_color(bgNode, D.colors.field)
 			gui.set_enabled(markerNode, false)
 			gui.set_enabled(self.textboxData[node].lines[self.textboxData[node].activeline].marker, false)
 			if D.isMobileDevice then
@@ -414,10 +406,10 @@ function M.textboxMultiline(self, action_id, action, node, enabled, tab_to)
 		end
 		-- if not active an not hoverd
 	elseif not gui.pick_node(bgNode, D.currentMousePos.x, D.currentMousePos.y) and self.textboxData[node].enabled then
-		gui.set_color(bgNode, D.colors.active)
+		gui.set_color(bgNode, D.colors.field)
 		-- disabled
 	elseif not self.textboxData[node].enabled then
-		gui.set_color(bgNode, D.colors.inactive)
+		gui.set_color(bgNode, D.colors.field_inactive)
 		if self.selectedNode == node then
 			D.nodes["active"], self.selectedNode = nil, nil
 		end
@@ -426,7 +418,7 @@ function M.textboxMultiline(self, action_id, action, node, enabled, tab_to)
 	-- If tab to
 	if action_id == hash("tab") and action.pressed and tab_to ~= nil and D.nodes["tab"] == false and D.nodes["active"] == node then
 		D.nodes["active"] = tab_to
-		gui.set_color(bgNode, D.colors.active)
+		gui.set_color(bgNode, D.colors.field)
 		gui.set_enabled(self.textboxData[node].lines[self.textboxData[node].activeline].marker, false)
 		D.nodes["tab"] = true
 	end
@@ -465,7 +457,7 @@ function M.textboxMultiline(self, action_id, action, node, enabled, tab_to)
 				self.textboxData[node].scroll.pos = vmath.vector3(action.x, action.y, 0)
 				-- Reset if outside node
 				if not gui.pick_node(bgNode, action.x, action.y) then
-					gui.set_color(bgNode, D.colors.active)
+					gui.set_color(bgNode, D.colors.field)
 					for i = 1, #self.textboxData[node].lines do 
 						gui.set_enabled(self.textboxData[node].lines[i].marker, false)
 					end

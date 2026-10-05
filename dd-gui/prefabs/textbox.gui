@@ -11,8 +11,13 @@ nodes {
     x: 200.0
     y: 30.0
   }
+  color {
+    x: 0.58
+    y: 0.58
+    z: 0.58
+  }
   type: TYPE_BOX
-  texture: "dropdown/button"
+  texture: "dropdown/field"
   id: "bg"
   layer: "bg"
   inherit_alpha: true
@@ -44,11 +49,6 @@ nodes {
     x: 180.0
     y: 30.0
   }
-  color {
-    x: 0.0
-    y: 0.0
-    z: 0.0
-  }
   type: TYPE_TEXT
   font: "Roboto"
   id: "text"
@@ -74,11 +74,6 @@ nodes {
   size {
     x: 1.0
     y: 20.0
-  }
-  color {
-    x: 0.0
-    y: 0.0
-    z: 0.0
   }
   type: TYPE_BOX
   id: "marker"

@@ -16,7 +16,7 @@ local function closeDropdown(self, node)
 	M.deleteCombobox(self, node)
 	gui.set_enabled(mask, false)
 	gui.set_text(selected_text, self.comboboxData[node].value)
-	gui.set_color(textbox, D.colors.active)
+	gui.set_color(textbox, D.colors.field)
 	self.comboboxData[node].open = false
 	self.comboboxData[node].init = false
 	D.nodes["active"]   = nil
@@ -87,7 +87,7 @@ function M.setValueAutobox(self, node, value, active)
 	if active then
 		gui.set_color(arrow, D.colors.accent)
 	else
-		gui.set_color(arrow, D.colors.inactive)
+		gui.set_color(arrow, D.colors.text_inactive)
 	end
 end
 
@@ -108,9 +108,9 @@ function M.initialize(self, node, list, up, enabled)
 
 	-- If enabled set color of the dropbox
 	if enabled then
-		gui.set_color(textbox, D.colors.active)
+		gui.set_color(textbox, D.colors.field)
 	else
-		gui.set_color(textbox, D.colors.inactive)
+		gui.set_color(textbox, D.colors.field_inactive)
 	end
 	gui.set_enabled(mask, false)
 	self.comboboxData[node].initialize = true
@@ -153,8 +153,9 @@ function M.createComboboxList(self, node, list, use_mag)
 	end
 	gui.set_scale(orginaltext, vmath.vector3(self.comboboxData[node].mag,self.comboboxData[node].mag,1))
 
-	--Reset color of node
-	gui.set_color(orginalnode,D.colors.active)
+	--Reset color of node; the marker of the chosen row follows the accent
+	gui.set_color(orginalnode,D.colors.row)
+	gui.set_color(orginalselect, D.colors.accent)
 
 	-- assign templet button first value or error message
 	if #list == 0 then
@@ -173,12 +174,12 @@ function M.createComboboxList(self, node, list, use_mag)
 
 		if list[1] == self.comboboxData[node].value then
 			gui.set_text(gui.get_node(node .. "/text"), list[1])
-			gui.set_color(orginalnode, D.colors.hover)
+			gui.set_color(orginalnode, D.colors.row_hover)
 			gui.set_position(dd_obj, vmath.vector3(0,0,0))
 			gui.set_enabled(orginalselect, true)
 		else
 			gui.set_text(gui.get_node(node .. "/text"), list[1])
-			gui.set_color(orginalnode, D.colors.active)
+			gui.set_color(orginalnode, D.colors.row)
 			gui.set_enabled(orginalselect, false)
 		end
 
@@ -199,14 +200,14 @@ function M.createComboboxList(self, node, list, use_mag)
 			-- set text value, position and check if selected
 			if list[k+1] == self.comboboxData[node].value then
 				gui.set_text(newtext, list[k+1])
-				gui.set_color(newnode, D.colors.hover)
+				gui.set_color(newnode, D.colors.row_hover)
 				gui.set_enabled(newselect, true)
 				if #list > 7 then
 					gui.set_position(dd_obj, vmath.vector3(0, D.valuelimit((k*30), 0, (self.comboboxData[node].size-170)), 0))
 				end
 			else
 				gui.set_text(newtext, list[k+1])
-				gui.set_color(newnode, D.colors.active)
+				gui.set_color(newnode, D.colors.row)
 				gui.set_enabled(newselect, false)
 			end
 			gui.set_position(newnode, vmath.vector3(0, -30*k, 0))
@@ -216,10 +217,7 @@ function M.createComboboxList(self, node, list, use_mag)
 end
 
 function M.combobox(self, action_id, action, node, list, enabled, up, use_mag, standardValue)
-	if action ~= nil and action.x ~= nil then
-		D.currentMousePos.x = action.x
-		D.currentMousePos.y = action.y
-	end
+	D.pointer(action)
 
 	local textbox = gui.get_node(node .. "/textbox")
 	local selected_text = gui.get_node(node .. "/selecttext")
@@ -277,17 +275,19 @@ function M.combobox(self, action_id, action, node, list, enabled, up, use_mag, s
 		end
 	end
 
-	-- Set color of arrow
+	-- Set color of arrow and text
 	if enabled then
 		gui.set_color(arrow, D.colors.accent)
+		gui.set_color(selected_text, D.colors.text)
 	else
-		gui.set_color(arrow, D.colors.inactive)
+		gui.set_color(arrow, D.colors.text_inactive)
+		gui.set_color(selected_text, D.colors.text_inactive)
 	end
 
 	-- Hovering and enabled
 	if action ~= nil then
 		if gui.pick_node(textbox, D.currentMousePos.x, D.currentMousePos.y) and enabled then
-			gui.set_color(textbox, D.colors.hover)
+			gui.set_color(textbox, D.colors.field_hover)
 			if action_id == hash("touch") and action.pressed then
 				if gui.pick_node(textbox, D.currentMousePos.x, D.currentMousePos.y) and not self.comboboxData[node].open and self.selectedNode == nil then
 					D.nodes["active"], self.selectedNode = node, node
@@ -303,14 +303,14 @@ function M.combobox(self, action_id, action, node, list, enabled, up, use_mag, s
 				closeDropdown(self, node)
 			end
 		elseif not enabled then
-			gui.set_color(textbox, D.colors.inactive)
-			gui.set_color(arrow, D.colors.inactive)
+			gui.set_color(textbox, D.colors.field_inactive)
+			gui.set_color(arrow, D.colors.text_inactive)
 
 			if self.selectedNode == node then
 				D.nodes["active"], self.selectedNode = nil, nil
 			end
 		elseif not self.comboboxData[node].open then
-			gui.set_color(textbox, D.colors.active)
+			gui.set_color(textbox, D.colors.field)
 		elseif enabled then
 			gui.set_color(arrow, D.colors.accent)
 		end
@@ -330,6 +330,13 @@ function M.combobox(self, action_id, action, node, list, enabled, up, use_mag, s
 
 		local listOfButton, listOfText, listOfSelect = buildButtonLists(self, node)
 		if #listOfButton > 0 then
+			-- Where the press started: a release far from there has scrolled the list
+			if action_id == hash("touch") and action.pressed then
+				self.comboboxData[node].pressY = D.currentMousePos.y
+			end
+			local dragged = self.comboboxData[node].pressY ~= nil
+				and math.abs(D.currentMousePos.y - self.comboboxData[node].pressY) > D.dragThreshold
+
 			-- Scroll: enabled when dropdown has more than 6 items
 			if self.comboboxData[node].count < 6 then
 				gui.set_enabled(dragpos, false)
@@ -369,7 +376,7 @@ function M.combobox(self, action_id, action, node, list, enabled, up, use_mag, s
 			self.comboboxData[node].previous = nil
 			for k in pairs(listOfButton) do
 				local ok, color = pcall(function() return gui.get_color(gui.get_node(node .. listOfButton[k])) end)
-				if ok and color == D.colors.hover then
+				if ok and color == D.colors.row_hover then
 					self.comboboxData[node].previous = k
 					break
 				end
@@ -377,28 +384,28 @@ function M.combobox(self, action_id, action, node, list, enabled, up, use_mag, s
 			if self.comboboxData[node].previous == nil then
 				for k in pairs(listOfButton) do
 					local ok, color = pcall(function() return gui.get_color(gui.get_node(node .. listOfButton[k])) end)
-					if ok and color == D.colors.select then
+					if ok and color == D.colors.row_select then
 						self.comboboxData[node].previous = k
 						break
 					end
 				end
 				if self.comboboxData[node].previous == nil then
 					self.comboboxData[node].previous = 1
-					pcall(function() gui.set_color(gui.get_node(node .. listOfButton[1]), D.colors.hover) end)
+					pcall(function() gui.set_color(gui.get_node(node .. listOfButton[1]), D.colors.row_hover) end)
 				end
 			end
 
 			-- Keyboard navigation
 			local prev = self.comboboxData[node].previous
 			if action_id == hash("up") and action.pressed and prev and prev > 1 and self.comboboxData[node].open then
-				pcall(function() gui.set_color(gui.get_node(node .. listOfButton[prev - 1]), D.colors.hover) end)
-				pcall(function() gui.set_color(gui.get_node(node .. listOfButton[prev]),     D.colors.active) end)
+				pcall(function() gui.set_color(gui.get_node(node .. listOfButton[prev - 1]), D.colors.row_hover) end)
+				pcall(function() gui.set_color(gui.get_node(node .. listOfButton[prev]),     D.colors.row) end)
 				if self.comboboxData[node].count > 6 then
 					gui.set_position(dd_obj, vmath.vector3(0, (prev - 1) * 30 - 30, 0))
 				end
 			elseif action_id == hash("down") and action.pressed and prev and prev < #listOfButton and self.comboboxData[node].open then
-				pcall(function() gui.set_color(gui.get_node(node .. listOfButton[prev + 1]), D.colors.hover) end)
-				pcall(function() gui.set_color(gui.get_node(node .. listOfButton[prev]),     D.colors.active) end)
+				pcall(function() gui.set_color(gui.get_node(node .. listOfButton[prev + 1]), D.colors.row_hover) end)
+				pcall(function() gui.set_color(gui.get_node(node .. listOfButton[prev]),     D.colors.row) end)
 				if self.comboboxData[node].count > 6 then
 					gui.set_position(dd_obj, vmath.vector3(0, (prev + 1) * 30 - 30, 0))
 				end
@@ -408,10 +415,10 @@ function M.combobox(self, action_id, action, node, list, enabled, up, use_mag, s
 			if action_id == hash("enter") and action.pressed then
 				for k in pairs(listOfButton) do
 					local ok_c, color = pcall(function() return gui.get_color(gui.get_node(node .. listOfButton[k])) end)
-					if ok_c and color == D.colors.hover then
+					if ok_c and color == D.colors.row_hover then
 						local ok_t, txt = pcall(gui.get_node, node .. listOfText[k])
 						if ok_t then self.comboboxData[node].value = gui.get_text(txt) end
-						pcall(function() gui.set_color(gui.get_node(node .. listOfButton[k]), D.colors.select) end)
+						pcall(function() gui.set_color(gui.get_node(node .. listOfButton[k]), D.colors.row_select) end)
 						closeDropdown(self, node)
 						break
 					end
@@ -427,7 +434,7 @@ function M.combobox(self, action_id, action, node, list, enabled, up, use_mag, s
 					if not (ok_b and ok_t and ok_s) then break end
 					local hovered  = gui.pick_node(btn, D.currentMousePos.x, D.currentMousePos.y)
 					local itemText = gui.get_text(txt)
-					if action_id == hash("touch") and action.released and self.comboboxData[node].open and hovered then
+					if action_id == hash("touch") and action.released and self.comboboxData[node].open and hovered and not dragged then
 						if itemText ~= D.no_entries then
 							self.comboboxData[node].value = itemText
 							closeDropdown(self, node)
@@ -435,17 +442,17 @@ function M.combobox(self, action_id, action, node, list, enabled, up, use_mag, s
 						end
 					elseif self.comboboxData[node].open and hovered then
 						if self.comboboxData[node].value == itemText then
-							gui.set_color(btn, D.colors.select)
+							gui.set_color(btn, D.colors.row_select)
 							gui.set_scale(sel, vmath.vector3(1, 0.75, 1))
 						else
-							gui.set_color(btn, D.colors.hover)
+							gui.set_color(btn, D.colors.row_hover)
 						end
 					elseif self.comboboxData[node].open and not hovered then
 						if self.comboboxData[node].value == itemText then
-							gui.set_color(btn, D.colors.hover)
+							gui.set_color(btn, D.colors.row_hover)
 							gui.set_scale(sel, vmath.vector3(1, 1, 1))
 						else
-							gui.set_color(btn, D.colors.active)
+							gui.set_color(btn, D.colors.row)
 						end
 					end
 				end
@@ -557,10 +564,7 @@ local function scheduleListUpdate(self, node, list, currentText, use_mag)
 end
 
 function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use_mag, id, tab_to)
-	if action ~= nil and action.x ~= nil then
-		D.currentMousePos.x = action.x
-		D.currentMousePos.y = action.y
-	end
+	D.pointer(action)
 
 	local textbox = gui.get_node(node .. "/textbox")
 	local selected_text = gui.get_node(node .. "/selecttext")
@@ -629,17 +633,19 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 		gui.set_text(selected_text, D.select_a_value)
 	end
 
-	-- Set color of arrow
+	-- Set color of arrow and text
 	if enabled then
 		gui.set_color(arrow, D.colors.accent)
+		gui.set_color(selected_text, D.colors.text)
 	else
-		gui.set_color(arrow, D.colors.inactive)
+		gui.set_color(arrow, D.colors.text_inactive)
+		gui.set_color(selected_text, D.colors.text_inactive)
 	end
 
 	-- Hovering and enabled
 	if action ~= nil then
 		if gui.pick_node(textbox, D.currentMousePos.x, D.currentMousePos.y) and enabled then
-			gui.set_color(textbox, D.colors.hover)
+			gui.set_color(textbox, D.colors.field_hover)
 			if action_id == hash("touch") and action.pressed then
 				if gui.pick_node(textbox, D.currentMousePos.x, D.currentMousePos.y) and not self.comboboxData[node].open and self.selectedNode == nil then
 					D.nodes["active"], self.selectedNode = node, node
@@ -652,7 +658,7 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 					end
 				elseif gui.pick_node(arrow, D.currentMousePos.x, D.currentMousePos.y) and self.comboboxData[node].open then
 					-- Close dropdown
-					gui.set_color(textbox, D.colors.active)
+					gui.set_color(textbox, D.colors.field)
 					gui.set_enabled(mask, false)
 					gui.set_text(selected_text, self.comboboxData[node].value)
 					M.deleteCombobox(self, node)
@@ -669,7 +675,7 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 			end
 		elseif not (gui.pick_node(mask, D.currentMousePos.x, D.currentMousePos.y) or gui.pick_node(textbox, D.currentMousePos.x, D.currentMousePos.y)) and enabled and self.selectedNode == node then
 			if action_id == hash("touch") and action.pressed then
-				gui.set_color(textbox, D.colors.active)
+				gui.set_color(textbox, D.colors.field)
 				gui.set_enabled(mask, false)
 				gui.set_text(selected_text, self.comboboxData[node].value)
 				M.deleteCombobox(self, node)
@@ -684,8 +690,8 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 				end
 			end
 		elseif not enabled and D.nodes["tab"] == false then
-			gui.set_color(textbox, D.colors.inactive)
-			gui.set_color(arrow, D.colors.inactive)
+			gui.set_color(textbox, D.colors.field_inactive)
+			gui.set_color(arrow, D.colors.text_inactive)
 
 			if self.selectedNode == node then
 				gui.set_enabled(markerNode, false)
@@ -697,7 +703,7 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 				end
 			end
 		elseif not self.comboboxData[node].open and D.nodes["tab"] == false then
-			gui.set_color(textbox, D.colors.active)
+			gui.set_color(textbox, D.colors.field)
 		elseif enabled then
 			gui.set_color(arrow, D.colors.accent)
 		end
@@ -705,7 +711,7 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 
 	-- If tab to
 	if action_id == hash("tab") and action.pressed and tab_to ~= nil and D.nodes["tab"] == false and D.nodes["active"] == node then
-		gui.set_color(textbox, D.colors.active)
+		gui.set_color(textbox, D.colors.field)
 		gui.set_enabled(mask, false)
 		gui.set_text(selected_text, self.comboboxData[node].value)
 		M.deleteCombobox(self, node)
@@ -736,7 +742,7 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 			gui.set_enabled(markerNode, true)
 			D.pulsate(markerNode)
 
-			gui.set_color(textbox, D.colors.hover)
+			gui.set_color(textbox, D.colors.field_hover)
 			if gui.get_text(selected_text) == D.select_a_value or gui.get_text(selected_text) == D.no_entries then
 				gui.set_text(selected_text, "")
 				gui.set_text(hiddenText,"")
@@ -790,7 +796,7 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 			gui.set_enabled(markerNode, true)
 			D.pulsate(markerNode)
 
-			gui.set_color(textbox, D.colors.hover)
+			gui.set_color(textbox, D.colors.field_hover)
 			if gui.get_text(selected_text) == D.select_a_value or gui.get_text(selected_text) == D.no_entries then
 				gui.set_text(selected_text, "")
 				gui.set_text(hiddenText,"")
@@ -959,6 +965,13 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 
 		local listOfButton, listOfText, listOfSelect = buildButtonLists(self, node)
 		if #listOfButton > 0 then
+			-- Where the press started: a release far from there has scrolled the list
+			if action_id == hash("touch") and action.pressed then
+				self.comboboxData[node].pressY = D.currentMousePos.y
+			end
+			local dragged = self.comboboxData[node].pressY ~= nil
+				and math.abs(D.currentMousePos.y - self.comboboxData[node].pressY) > D.dragThreshold
+
 			-- Scroll: enabled when dropdown has more than 6 items
 			if self.comboboxData[node].count < 6 then
 				gui.set_enabled(dragpos, false)
@@ -998,7 +1011,7 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 			self.comboboxData[node].previous = nil
 			for k in pairs(listOfButton) do
 				local ok, color = pcall(function() return gui.get_color(gui.get_node(node .. listOfButton[k])) end)
-				if ok and color == D.colors.hover then
+				if ok and color == D.colors.row_hover then
 					self.comboboxData[node].previous = k
 					break
 				end
@@ -1006,28 +1019,28 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 			if self.comboboxData[node].previous == nil then
 				for k in pairs(listOfButton) do
 					local ok, color = pcall(function() return gui.get_color(gui.get_node(node .. listOfButton[k])) end)
-					if ok and color == D.colors.select then
+					if ok and color == D.colors.row_select then
 						self.comboboxData[node].previous = k
 						break
 					end
 				end
 				if self.comboboxData[node].previous == nil then
 					self.comboboxData[node].previous = 1
-					pcall(function() gui.set_color(gui.get_node(node .. listOfButton[1]), D.colors.hover) end)
+					pcall(function() gui.set_color(gui.get_node(node .. listOfButton[1]), D.colors.row_hover) end)
 				end
 			end
 
 			-- Keyboard navigation
 			local prev = self.comboboxData[node].previous
 			if action_id == hash("up") and action.pressed and prev and prev > 1 and self.comboboxData[node].open then
-				pcall(function() gui.set_color(gui.get_node(node .. listOfButton[prev - 1]), D.colors.hover) end)
-				pcall(function() gui.set_color(gui.get_node(node .. listOfButton[prev]),     D.colors.active) end)
+				pcall(function() gui.set_color(gui.get_node(node .. listOfButton[prev - 1]), D.colors.row_hover) end)
+				pcall(function() gui.set_color(gui.get_node(node .. listOfButton[prev]),     D.colors.row) end)
 				if self.comboboxData[node].count > 6 then
 					gui.set_position(dd_obj, vmath.vector3(0, (prev - 1) * 30 - 30, 0))
 				end
 			elseif action_id == hash("down") and action.pressed and prev and prev < #listOfButton and self.comboboxData[node].open then
-				pcall(function() gui.set_color(gui.get_node(node .. listOfButton[prev + 1]), D.colors.hover) end)
-				pcall(function() gui.set_color(gui.get_node(node .. listOfButton[prev]),     D.colors.active) end)
+				pcall(function() gui.set_color(gui.get_node(node .. listOfButton[prev + 1]), D.colors.row_hover) end)
+				pcall(function() gui.set_color(gui.get_node(node .. listOfButton[prev]),     D.colors.row) end)
 				if self.comboboxData[node].count > 6 then
 					gui.set_position(dd_obj, vmath.vector3(0, (prev + 1) * 30 - 30, 0))
 				end
@@ -1037,7 +1050,7 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 			if action_id == hash("enter") and action.pressed then
 				for k in pairs(listOfButton) do
 					local ok, color = pcall(function() return gui.get_color(gui.get_node(node .. listOfButton[k])) end)
-					if ok and color == D.colors.hover then
+					if ok and color == D.colors.row_hover then
 						local ok_t, txtNode = pcall(gui.get_node, node .. listOfText[k])
 						if ok_t then self.comboboxData[node].value = gui.get_text(txtNode) end
 						closeDropdown(self, node)
@@ -1061,7 +1074,7 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 					if not (ok_b and ok_t and ok_s) then break end
 					local hovered  = gui.pick_node(btn, D.currentMousePos.x, D.currentMousePos.y)
 					local itemText = gui.get_text(txt)
-					if action_id == hash("touch") and action.released and self.comboboxData[node].open and hovered then
+					if action_id == hash("touch") and action.released and self.comboboxData[node].open and hovered and not dragged then
 						if itemText ~= D.no_entries then
 							self.comboboxData[node].value = itemText
 							closeDropdown(self, node)
@@ -1075,17 +1088,17 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 						end
 					elseif self.comboboxData[node].open and hovered then
 						if self.comboboxData[node].value == itemText then
-							gui.set_color(btn, D.colors.select)
+							gui.set_color(btn, D.colors.row_select)
 							gui.set_scale(sel, vmath.vector3(1, 0.75, 1))
 						else
-							gui.set_color(btn, D.colors.hover)
+							gui.set_color(btn, D.colors.row_hover)
 						end
 					elseif self.comboboxData[node].open and not hovered then
 						if self.comboboxData[node].value == itemText then
-							gui.set_color(btn, D.colors.hover)
+							gui.set_color(btn, D.colors.row_hover)
 							gui.set_scale(sel, vmath.vector3(1, 1, 1))
 						else
-							gui.set_color(btn, D.colors.active)
+							gui.set_color(btn, D.colors.row)
 						end
 					end
 				end
@@ -1131,7 +1144,7 @@ function M.clearCombobox(self, node)
 	data.value     = D.select_a_value
 	data.lastValue = D.select_a_value  -- prevent spurious changed on next frame
 	gui.set_text(selected_text, D.select_a_value)
-	gui.set_color(textbox, D.colors.active)
+	gui.set_color(textbox, D.colors.field)
 	gui.set_color(arrow,   D.colors.accent)
 
 	-- Release focus if this node was active
@@ -1182,8 +1195,8 @@ function M.clearAutobox(self, node)
 	markerPos.x = -90
 	gui.set_position(markerNode, markerPos)
 
-	gui.set_color(textbox, D.colors.active)
-	gui.set_color(arrow,   D.colors.inactive)
+	gui.set_color(textbox, D.colors.field)
+	gui.set_color(arrow,   D.colors.text_inactive)
 
 	-- Release focus if this node was active
 	if D.nodes["active"] == node then

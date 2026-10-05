@@ -25,6 +25,13 @@ local function get_text_metrics_from_node(node)
 	return metrics
 end
 
+-- The colors of a slider: track, level and the dot of the handle.
+local function applyColors(node)
+	gui.set_color(gui.get_node(node .. "/slider_bg"), D.colors.track)
+	gui.set_color(gui.get_node(node .. "/slider_level"), D.colors.accent)
+	gui.set_color(gui.get_node(node .. "/accent"), D.colors.accent)
+end
+
 function M.resetSlider(self, node)
 	self.slider = self.slider or {}
 	if not self.slider[node] then
@@ -51,6 +58,7 @@ function M.setValueSlider(self, node, value, min, max, step)
 		self.slider[node].pressed = false
 		self.slider[node].max = max
 		self.slider[node].min = min
+		applyColors(node)
 	end
 
 	local slidebg = gui.get_node(node .. "/slider_bg")
@@ -87,10 +95,7 @@ end
 
 
 function M.slider(self, action_id, action, node, enabled, showpopup, min, max, step)
-	if action ~= nil and action.x ~= nil then
-		D.currentMousePos.x = action.x
-		D.currentMousePos.y = action.y
-	end
+	D.pointer(action)
 	
 	-- Check if can be activated
 	self.selectedNode = D.nodes["active"] or nil
@@ -110,9 +115,7 @@ function M.slider(self, action_id, action, node, enabled, showpopup, min, max, s
 		self.slider[node] = {}
 		self.slider[node].value = 0
 		self.slider[node].pressed = false
-		gui.set_color(slidelevel, D.colors.accent)
-		gui.set_color(handleCenter, D.colors.accent)
-		gui.set_color(slidebg, D.colors.active)
+		applyColors(node)
 	end
 
 	-- Fall back to 0-100 if min/max not provided
@@ -132,8 +135,12 @@ function M.slider(self, action_id, action, node, enabled, showpopup, min, max, s
 		D.nodes["active"], self.selectedNode = node, node
 		local widthmod = window.get_size()/sys.get_config_int("display.width")
 
-		-- Handle input
-		if action_id == hash("touch") and gui.pick_node(handle, D.currentMousePos.x, D.currentMousePos.y) and action.pressed and self.slider[node].pressed == false then
+		-- Handle input. Pressing on the handle or anywhere on the track takes hold of
+		-- the handle: it jumps to the pointer and follows it until the button (or the
+		-- finger) is released. The track is thin, so a press just above or below it
+		-- counts as well; on a touch screen the hit areas are larger still.
+		if action_id == hash("touch") and action.pressed and self.slider[node].pressed == false
+				and (D.pick(self, handle) or D.pick(self, slidebg, 0, D.touchPadding * 1.6) or D.pickNear(slidebg, 0, 6)) then
 			self.slider[node].pressed = true
 		elseif self.slider[node].pressed and action_id == hash("touch") and action.released then
 				self.slider[node].pressed = false
@@ -158,10 +165,6 @@ function M.slider(self, action_id, action, node, enabled, showpopup, min, max, s
 			if showpopup then
 				gui.set_enabled(textbox, true)
 			end
-		-- I pressed on slider
-	elseif action_id == hash("touch") and gui.pick_node(slidebg, D.currentMousePos.x, D.currentMousePos.y) and action.pressed and not gui.pick_node(handle, D.currentMousePos.x, D.currentMousePos.y) then
-		gui.set_screen_position(handle, vmath.vector3(D.valuelimit(D.currentMousePos.x*widthmod, slider_fillpos.x, slider_fillpos.x + 2*(slider_pos.x-slider_fillpos.x)),handle_start.y, handle_start.z ))
-			gui.set_size(slidelevel, vmath.vector3(gui.get_position(handle).x + (slider_size.x/2), slider_fillsize.y, slider_fillsize.z))
 		elseif not gui.pick_node(handle, D.currentMousePos.x, D.currentMousePos.y) then
 			if showpopup then
 				gui.set_enabled(textbox, false)
@@ -191,6 +194,9 @@ function M.slider(self, action_id, action, node, enabled, showpopup, min, max, s
 		self.slider[node].pressed = false
 		gui.set_scale(handleCenter, vmath.vector3(1,1,0))
 		gui.set_color(handleCenter, D.colors.accent)
+		if showpopup then
+			gui.set_enabled(textbox, false)
+		end
 	end
 
 	-- Apply disabled visual state to the handle so it looks inactive,
