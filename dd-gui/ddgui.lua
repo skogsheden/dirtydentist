@@ -100,8 +100,9 @@ D.colors = {
 	box_hover	= vmath.vector4(0.90, 0.90, 0.90, 1),
 	box_inactive	= vmath.vector4(0.40, 0.40, 0.40, 0.5),
 	-- The rows of a dropdown list. The list keeps track of its rows by their
-	-- color, so these three must differ from each other.
+	-- color, so these four must differ from each other.
 	row		= vmath.vector4(0.14, 0.14, 0.14, 1),
+	row_chosen	= vmath.vector4(0.20, 0.20, 0.20, 1),	-- the chosen row
 	row_hover	= vmath.vector4(0.27, 0.27, 0.27, 1),	-- the row the pointer or the arrow keys are on
 	row_select	= vmath.vector4(0.34, 0.34, 0.34, 1),	-- the pointer is on the chosen row
 	-- The track of a slider, the background of a text block

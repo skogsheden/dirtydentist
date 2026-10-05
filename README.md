@@ -384,8 +384,9 @@ D.colors.field_inactive
 D.colors.box
 D.colors.box_hover
 D.colors.box_inactive
--- Rows of a dropdown list (the three must differ from each other)
+-- Rows of a dropdown list (the four must differ from each other)
 D.colors.row
+D.colors.row_chosen
 D.colors.row_hover
 D.colors.row_select
 -- Slider track, background of a text block
@@ -442,6 +443,7 @@ end
 - Disabled text boxes and comboboxes dim their text
 - Touch screens: no hover, tooltip or focus is left behind after a tap; larger hit areas for checkbox, radio button and slider (`D.touchPadding`, `D.pick`); dragging a dropdown list scrolls without choosing (`D.dragThreshold`)
 - Slider: thinner track and a smaller handle; pressing on (or just beside) the track takes hold of the handle; the value popup is hidden when the pointer leaves
+- Dropdown lists (combobox, auto-suggest box): the list is as wide as the box and as tall as its rows (at most six, then it scrolls); the rows go edge to edge with their text under the text of the box; the chosen row has an accent bar and its own color `D.colors.row_chosen`; a scroll indicator that shows how much of the list is in view; the arrow keys no longer scroll past the end of the list
 - `D.mark` and `D.colors.correct` / `wrong` for marking answers
 - `D.setAccent(color)`; the marker of the chosen row in a dropdown list and a slider given a value in `init()` now follow `D.colors`
 - A focus left behind by an unloaded gui scene no longer locks the widgets of the next scene

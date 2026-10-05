@@ -3,6 +3,98 @@
 
 local M = {}
 
+-- The list: rows of ROW_HEIGHT px (the height of the row in the prefab), at most VISIBLE_ROWS
+-- of them at a time - a longer list is scrolled - inside a frame of FRAME px.
+local ROW_HEIGHT = 30
+local VISIBLE_ROWS = 6
+local FRAME = 1
+-- the scroll indicator: its smallest height, and its distance to the ends of the list
+local INDICATOR_MIN = 18
+local INDICATOR_MARGIN = 3
+
+-- Sizes the list after its content and places it against the box: under it, or
+-- above it for a list that opens upwards. rows: the number of rows in the list.
+local function fitList(self, node, rows)
+	local data = self.comboboxData[node]
+	local bg = gui.get_node(node .. "/bg")
+	local mask = gui.get_node(node .. "/mask")
+	local view = math.max(1, math.min(rows, VISIBLE_ROWS)) * ROW_HEIGHT
+	data.view = view
+
+	local size = gui.get_size(mask)
+	size.y = view
+	gui.set_size(mask, size)
+	size = gui.get_size(bg)
+	size.y = view + 2 * FRAME
+	gui.set_size(bg, size)
+
+	-- The prefab has the list just under the box; upwards it is mirrored to just above
+	-- it. (Box and list are root nodes of the template, so their positions and scale
+	-- are those of the template instance in the scene.)
+	local pos = gui.get_position(bg)
+	data.listY = data.listY or pos.y
+	if data.up then
+		local box = gui.get_position(gui.get_node(node .. "/textbox"))
+		pos.y = 2 * box.y - data.listY + size.y * gui.get_scale(bg).y
+	else
+		pos.y = data.listY
+	end
+	gui.set_position(bg, pos)
+end
+
+-- The first row with a color (the list keeps track of its rows by their color)
+local function findRow(node, listOfButton, color)
+	for k = 1, #listOfButton do
+		local ok, c = pcall(function() return gui.get_color(gui.get_node(node .. listOfButton[k])) end)
+		if ok and c == color then return k end
+	end
+	return nil
+end
+
+-- The color of a row that is not marked: the chosen row has its own
+local function restColor(self, node, textId)
+	local ok, txt = pcall(gui.get_node, node .. textId)
+	if ok and gui.get_text(txt) == self.comboboxData[node].value then
+		return D.colors.row_chosen
+	end
+	return D.colors.row
+end
+
+-- How far the list can be scrolled
+local function maxScroll(self, node)
+	local data = self.comboboxData[node]
+	return math.max(0, (data.size or 0) - (data.view or VISIBLE_ROWS * ROW_HEIGHT))
+end
+
+-- Scrolls the list just enough for row k (1 = the first row) to be in view
+local function showRow(self, node, dd_obj, k)
+	local view = self.comboboxData[node].view or VISIBLE_ROWS * ROW_HEIGHT
+	local top = (k - 1) * ROW_HEIGHT
+	local pos = gui.get_position(dd_obj)
+	if top < pos.y then
+		pos.y = top
+	elseif top + ROW_HEIGHT > pos.y + view then
+		pos.y = top + ROW_HEIGHT - view
+	end
+	pos.y = D.valuelimit(pos.y, 0, maxScroll(self, node))
+	gui.set_position(dd_obj, pos)
+end
+
+-- The scroll indicator: as tall as the share of the list that is in view, placed
+-- after how far the list is scrolled.
+local function placeIndicator(self, node, dragpos, scrolled)
+	local data = self.comboboxData[node]
+	local view = data.view or VISIBLE_ROWS * ROW_HEIGHT
+	local range = maxScroll(self, node)
+	local size = gui.get_size(dragpos)
+	size.y = math.max(INDICATOR_MIN, view * view / math.max(data.size or view, view))
+	gui.set_size(dragpos, size)
+	local amount = range > 0 and D.valuelimit(scrolled / range, 0, 1) or 0
+	local pos = gui.get_position(dragpos)
+	pos.y = -(INDICATOR_MARGIN + size.y / 2 + (view - size.y - 2 * INDICATOR_MARGIN) * amount)
+	gui.set_position(dragpos, pos)
+end
+
 -- ---------------------------------------------------------------------------
 -- Local helpers shared by combobox() and auto_suggestbox()
 -- ---------------------------------------------------------------------------
@@ -99,12 +191,8 @@ function M.initialize(self, node, list, up, enabled)
 	self.comboboxData[node].open = false -- start as closed
 	self.comboboxData[node].scrolling = false -- Not scrolling
 
-	-- choose side to which way to isOpen
-	if up then
-		local pos = gui.get_position(mask)
-		pos.y = pos.y + 230
-		gui.set_position(mask, pos)
-	end
+	-- which way the list opens; it is placed when it is built (fitList)
+	self.comboboxData[node].up = up and true or false
 
 	-- If enabled set color of the dropbox
 	if enabled then
@@ -160,11 +248,15 @@ function M.createComboboxList(self, node, list, use_mag)
 	-- assign templet button first value or error message
 	if #list == 0 then
 		gui.set_text(gui.get_node(node .. "/text"), D.no_entries)
+		gui.set_enabled(orginalselect, false)
+		self.comboboxData[node].size = ROW_HEIGHT
+		fitList(self, node, 1)
 		self.comboboxData[node].rebuilding_list = false
 	else
 		-- Get values from list
-		self.comboboxData[node].size = #list * 30
+		self.comboboxData[node].size = #list * ROW_HEIGHT
 		self.comboboxData[node].count = #list - 1 -- onenode is allready created
+		fitList(self, node, #list)
 
 		-- Set size of dragbox
 		local currentsize = gui.get_size(dd_obj)
@@ -174,7 +266,7 @@ function M.createComboboxList(self, node, list, use_mag)
 
 		if list[1] == self.comboboxData[node].value then
 			gui.set_text(gui.get_node(node .. "/text"), list[1])
-			gui.set_color(orginalnode, D.colors.row_hover)
+			gui.set_color(orginalnode, D.colors.row_chosen)
 			gui.set_position(dd_obj, vmath.vector3(0,0,0))
 			gui.set_enabled(orginalselect, true)
 		else
@@ -200,17 +292,18 @@ function M.createComboboxList(self, node, list, use_mag)
 			-- set text value, position and check if selected
 			if list[k+1] == self.comboboxData[node].value then
 				gui.set_text(newtext, list[k+1])
-				gui.set_color(newnode, D.colors.row_hover)
+				gui.set_color(newnode, D.colors.row_chosen)
 				gui.set_enabled(newselect, true)
-				if #list > 7 then
-					gui.set_position(dd_obj, vmath.vector3(0, D.valuelimit((k*30), 0, (self.comboboxData[node].size-170)), 0))
+				-- a long list opens with the chosen row in view, one row down from the top
+				if #list > VISIBLE_ROWS then
+					gui.set_position(dd_obj, vmath.vector3(0, D.valuelimit((k - 1) * ROW_HEIGHT, 0, maxScroll(self, node)), 0))
 				end
 			else
 				gui.set_text(newtext, list[k+1])
 				gui.set_color(newnode, D.colors.row)
 				gui.set_enabled(newselect, false)
 			end
-			gui.set_position(newnode, vmath.vector3(0, -30*k, 0))
+			gui.set_position(newnode, vmath.vector3(0, -ROW_HEIGHT * k, 0))
 		end
 		self.comboboxData[node].rebuilding_list = false
 	end
@@ -337,8 +430,8 @@ function M.combobox(self, action_id, action, node, list, enabled, up, use_mag, s
 			local dragged = self.comboboxData[node].pressY ~= nil
 				and math.abs(D.currentMousePos.y - self.comboboxData[node].pressY) > D.dragThreshold
 
-			-- Scroll: enabled when dropdown has more than 6 items
-			if self.comboboxData[node].count < 6 then
+			-- Scroll: enabled when the list has more rows than are shown at a time
+			if self.comboboxData[node].count < VISIBLE_ROWS then
 				gui.set_enabled(dragpos, false)
 			else
 				gui.set_enabled(dragpos, true)
@@ -353,23 +446,19 @@ function M.combobox(self, action_id, action, node, list, enabled, up, use_mag, s
 					local currentPos = gui.get_position(dd_obj)
 					self.comboboxData[node].scroll.delta = self.comboboxData[node].scroll.pos - vmath.vector3(D.currentMousePos.x, D.currentMousePos.y, 0)
 					self.comboboxData[node].scroll.pos = vmath.vector3(D.currentMousePos.x, D.currentMousePos.y, 0)
-					currentPos.y = D.valuelimit(currentPos.y - self.comboboxData[node].scroll.delta.y, 0, self.comboboxData[node].size - 170)
+					currentPos.y = D.valuelimit(currentPos.y - self.comboboxData[node].scroll.delta.y, 0, maxScroll(self, node))
 					gui.set_position(dd_obj, currentPos)
 				elseif self.comboboxData[node].open and action_id == hash("wheelup") and gui.pick_node(dd_obj, D.currentMousePos.x, D.currentMousePos.y) then
 					local currentPos = gui.get_position(dd_obj)
-					currentPos.y = D.valuelimit(currentPos.y - D.scrollSpeed, 0, self.comboboxData[node].size - 170)
+					currentPos.y = D.valuelimit(currentPos.y - D.scrollSpeed, 0, maxScroll(self, node))
 					gui.set_position(dd_obj, currentPos)
 				elseif self.comboboxData[node].open and action_id == hash("wheeldown") and gui.pick_node(dd_obj, D.currentMousePos.x, D.currentMousePos.y) then
 					local currentPos = gui.get_position(dd_obj)
-					currentPos.y = D.valuelimit(currentPos.y + D.scrollSpeed, 0, self.comboboxData[node].size - 170)
+					currentPos.y = D.valuelimit(currentPos.y + D.scrollSpeed, 0, maxScroll(self, node))
 					gui.set_position(dd_obj, currentPos)
 				end
 				-- Sync scroll indicator
-				local currentPos = gui.get_position(dd_obj)
-				local amountcomplete = currentPos.y / (self.comboboxData[node].size - 170)
-				local dragposCurrent = gui.get_position(dragpos)
-				dragposCurrent.y = D.valuelimit(-170 * amountcomplete, -gui.get_size(dd_obj).y, -10)
-				gui.set_position(dragpos, dragposCurrent)
+				placeIndicator(self, node, dragpos, gui.get_position(dd_obj).y)
 			end
 
 			-- Track the hovered/selected row
@@ -389,6 +478,10 @@ function M.combobox(self, action_id, action, node, list, enabled, up, use_mag, s
 						break
 					end
 				end
+				-- no row is marked: the arrow keys start from the chosen row, or else from the first
+				if self.comboboxData[node].previous == nil then
+					self.comboboxData[node].previous = findRow(node, listOfButton, D.colors.row_chosen)
+				end
 				if self.comboboxData[node].previous == nil then
 					self.comboboxData[node].previous = 1
 					pcall(function() gui.set_color(gui.get_node(node .. listOfButton[1]), D.colors.row_hover) end)
@@ -399,23 +492,20 @@ function M.combobox(self, action_id, action, node, list, enabled, up, use_mag, s
 			local prev = self.comboboxData[node].previous
 			if action_id == hash("up") and action.pressed and prev and prev > 1 and self.comboboxData[node].open then
 				pcall(function() gui.set_color(gui.get_node(node .. listOfButton[prev - 1]), D.colors.row_hover) end)
-				pcall(function() gui.set_color(gui.get_node(node .. listOfButton[prev]),     D.colors.row) end)
-				if self.comboboxData[node].count > 6 then
-					gui.set_position(dd_obj, vmath.vector3(0, (prev - 1) * 30 - 30, 0))
-				end
+				pcall(function() gui.set_color(gui.get_node(node .. listOfButton[prev]),     restColor(self, node, listOfText[prev])) end)
+				showRow(self, node, dd_obj, prev - 1)
 			elseif action_id == hash("down") and action.pressed and prev and prev < #listOfButton and self.comboboxData[node].open then
 				pcall(function() gui.set_color(gui.get_node(node .. listOfButton[prev + 1]), D.colors.row_hover) end)
-				pcall(function() gui.set_color(gui.get_node(node .. listOfButton[prev]),     D.colors.row) end)
-				if self.comboboxData[node].count > 6 then
-					gui.set_position(dd_obj, vmath.vector3(0, (prev + 1) * 30 - 30, 0))
-				end
+				pcall(function() gui.set_color(gui.get_node(node .. listOfButton[prev]),     restColor(self, node, listOfText[prev])) end)
+				showRow(self, node, dd_obj, prev + 1)
 			end
 
 			-- Confirm selection with Enter
 			if action_id == hash("enter") and action.pressed then
+				local marked = findRow(node, listOfButton, D.colors.row_hover) or findRow(node, listOfButton, D.colors.row_select)
+					or findRow(node, listOfButton, D.colors.row_chosen)
 				for k in pairs(listOfButton) do
-					local ok_c, color = pcall(function() return gui.get_color(gui.get_node(node .. listOfButton[k])) end)
-					if ok_c and color == D.colors.row_hover then
+					if k == marked then
 						local ok_t, txt = pcall(gui.get_node, node .. listOfText[k])
 						if ok_t then self.comboboxData[node].value = gui.get_text(txt) end
 						pcall(function() gui.set_color(gui.get_node(node .. listOfButton[k]), D.colors.row_select) end)
@@ -449,7 +539,7 @@ function M.combobox(self, action_id, action, node, list, enabled, up, use_mag, s
 						end
 					elseif self.comboboxData[node].open and not hovered then
 						if self.comboboxData[node].value == itemText then
-							gui.set_color(btn, D.colors.row_hover)
+							gui.set_color(btn, D.colors.row_chosen)
 							gui.set_scale(sel, vmath.vector3(1, 1, 1))
 						else
 							gui.set_color(btn, D.colors.row)
@@ -972,8 +1062,8 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 			local dragged = self.comboboxData[node].pressY ~= nil
 				and math.abs(D.currentMousePos.y - self.comboboxData[node].pressY) > D.dragThreshold
 
-			-- Scroll: enabled when dropdown has more than 6 items
-			if self.comboboxData[node].count < 6 then
+			-- Scroll: enabled when the list has more rows than are shown at a time
+			if self.comboboxData[node].count < VISIBLE_ROWS then
 				gui.set_enabled(dragpos, false)
 			else
 				gui.set_enabled(dragpos, true)
@@ -988,23 +1078,19 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 					local currentPos = gui.get_position(dd_obj)
 					self.comboboxData[node].scroll.delta = self.comboboxData[node].scroll.pos - vmath.vector3(D.currentMousePos.x, D.currentMousePos.y, 0)
 					self.comboboxData[node].scroll.pos = vmath.vector3(D.currentMousePos.x, D.currentMousePos.y, 0)
-					currentPos.y = D.valuelimit(currentPos.y - self.comboboxData[node].scroll.delta.y, 0, self.comboboxData[node].size - 170)
+					currentPos.y = D.valuelimit(currentPos.y - self.comboboxData[node].scroll.delta.y, 0, maxScroll(self, node))
 					gui.set_position(dd_obj, currentPos)
 				elseif self.comboboxData[node].open and action_id == hash("wheelup") and gui.pick_node(dd_obj, D.currentMousePos.x, D.currentMousePos.y) then
 					local currentPos = gui.get_position(dd_obj)
-					currentPos.y = D.valuelimit(currentPos.y - D.scrollSpeed, 0, self.comboboxData[node].size - 170)
+					currentPos.y = D.valuelimit(currentPos.y - D.scrollSpeed, 0, maxScroll(self, node))
 					gui.set_position(dd_obj, currentPos)
 				elseif self.comboboxData[node].open and action_id == hash("wheeldown") and gui.pick_node(dd_obj, D.currentMousePos.x, D.currentMousePos.y) then
 					local currentPos = gui.get_position(dd_obj)
-					currentPos.y = D.valuelimit(currentPos.y + D.scrollSpeed, 0, self.comboboxData[node].size - 170)
+					currentPos.y = D.valuelimit(currentPos.y + D.scrollSpeed, 0, maxScroll(self, node))
 					gui.set_position(dd_obj, currentPos)
 				end
 				-- Sync scroll indicator
-				local currentPos = gui.get_position(dd_obj)
-				local amountcomplete = currentPos.y / (self.comboboxData[node].size - 170)
-				local dragposCurrent = gui.get_position(dragpos)
-				dragposCurrent.y = D.valuelimit(-170 * amountcomplete, -gui.get_size(dd_obj).y, -10)
-				gui.set_position(dragpos, dragposCurrent)
+				placeIndicator(self, node, dragpos, gui.get_position(dd_obj).y)
 			end
 
 			-- Track hovered/selected row
@@ -1024,6 +1110,10 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 						break
 					end
 				end
+				-- no row is marked: the arrow keys start from the chosen row, or else from the first
+				if self.comboboxData[node].previous == nil then
+					self.comboboxData[node].previous = findRow(node, listOfButton, D.colors.row_chosen)
+				end
 				if self.comboboxData[node].previous == nil then
 					self.comboboxData[node].previous = 1
 					pcall(function() gui.set_color(gui.get_node(node .. listOfButton[1]), D.colors.row_hover) end)
@@ -1034,23 +1124,20 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 			local prev = self.comboboxData[node].previous
 			if action_id == hash("up") and action.pressed and prev and prev > 1 and self.comboboxData[node].open then
 				pcall(function() gui.set_color(gui.get_node(node .. listOfButton[prev - 1]), D.colors.row_hover) end)
-				pcall(function() gui.set_color(gui.get_node(node .. listOfButton[prev]),     D.colors.row) end)
-				if self.comboboxData[node].count > 6 then
-					gui.set_position(dd_obj, vmath.vector3(0, (prev - 1) * 30 - 30, 0))
-				end
+				pcall(function() gui.set_color(gui.get_node(node .. listOfButton[prev]),     restColor(self, node, listOfText[prev])) end)
+				showRow(self, node, dd_obj, prev - 1)
 			elseif action_id == hash("down") and action.pressed and prev and prev < #listOfButton and self.comboboxData[node].open then
 				pcall(function() gui.set_color(gui.get_node(node .. listOfButton[prev + 1]), D.colors.row_hover) end)
-				pcall(function() gui.set_color(gui.get_node(node .. listOfButton[prev]),     D.colors.row) end)
-				if self.comboboxData[node].count > 6 then
-					gui.set_position(dd_obj, vmath.vector3(0, (prev + 1) * 30 - 30, 0))
-				end
+				pcall(function() gui.set_color(gui.get_node(node .. listOfButton[prev]),     restColor(self, node, listOfText[prev])) end)
+				showRow(self, node, dd_obj, prev + 1)
 			end
 
 			-- Confirm selection with Enter
 			if action_id == hash("enter") and action.pressed then
+				local marked = findRow(node, listOfButton, D.colors.row_hover) or findRow(node, listOfButton, D.colors.row_select)
+					or findRow(node, listOfButton, D.colors.row_chosen)
 				for k in pairs(listOfButton) do
-					local ok, color = pcall(function() return gui.get_color(gui.get_node(node .. listOfButton[k])) end)
-					if ok and color == D.colors.row_hover then
+					if k == marked then
 						local ok_t, txtNode = pcall(gui.get_node, node .. listOfText[k])
 						if ok_t then self.comboboxData[node].value = gui.get_text(txtNode) end
 						closeDropdown(self, node)
@@ -1095,7 +1182,7 @@ function M.auto_suggestbox(self, action_id, action, node, list, enabled, up, use
 						end
 					elseif self.comboboxData[node].open and not hovered then
 						if self.comboboxData[node].value == itemText then
-							gui.set_color(btn, D.colors.row_hover)
+							gui.set_color(btn, D.colors.row_chosen)
 							gui.set_scale(sel, vmath.vector3(1, 1, 1))
 						else
 							gui.set_color(btn, D.colors.row)

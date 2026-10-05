@@ -149,8 +149,8 @@ nodes {
     y: -16.0
   }
   size {
-    x: 180.0
-    y: 200.0
+    x: 198.0
+    y: 182.0
   }
   type: TYPE_BOX
   texture: "dropdown/bg"
@@ -159,19 +159,24 @@ nodes {
   layer: "dd"
   inherit_alpha: true
   slice9 {
-    x: 10.0
-    y: 10.0
-    z: 10.0
-    w: 10.0
+    x: 4.0
+    y: 4.0
+    z: 4.0
+    w: 4.0
   }
 }
 nodes {
   position {
-    y: -7.0
+    y: -1.0
   }
   size {
-    x: 160.0
+    x: 196.0
     y: 180.0
+  }
+  color {
+    x: 0.14
+    y: 0.14
+    z: 0.14
   }
   type: TYPE_BOX
   id: "mask"
@@ -189,7 +194,7 @@ nodes {
 }
 nodes {
   size {
-    x: 160.0
+    x: 196.0
     y: 190.0
   }
   type: TYPE_BOX
@@ -202,7 +207,7 @@ nodes {
 }
 nodes {
   size {
-    x: 160.0
+    x: 196.0
     y: 30.0
   }
   color {
@@ -225,11 +230,11 @@ nodes {
 }
 nodes {
   position {
-    x: -70.0
+    x: -90.0
     y: -15.0
   }
   size {
-    x: 140.0
+    x: 176.0
     y: 20.0
   }
   type: TYPE_TEXT
@@ -253,12 +258,12 @@ nodes {
 }
 nodes {
   position {
-    x: -72.0
+    x: -96.5
     y: -15.0
   }
   size {
     x: 3.0
-    y: 12.5
+    y: 30.0
   }
   color {
     x: 0.169
@@ -269,16 +274,15 @@ nodes {
   id: "selected"
   parent: "button"
   inherit_alpha: true
-  size_mode: SIZE_MODE_AUTO
 }
 nodes {
   position {
-    x: 80.0
+    x: 96.0
     y: -10.0
   }
   size {
-    x: 2.0
-    y: 10.0
+    x: 3.0
+    y: 18.0
   }
   color {
     x: 0.6
