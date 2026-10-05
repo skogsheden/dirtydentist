@@ -65,6 +65,133 @@
 	}
 
 	{{{DEFOLD_CUSTOM_CSS_INLINE}}}
+
+	/* ---- The loading page (DD-GUI) -------------------------------------------
+	* These rules come after Defold's theme above, so they win over it.
+	* The page looks like the loading screen of the applications: black, the
+	* name of the project, "Loading ..." and a thin progress bar. The texts lie
+	* in #dd-loading BEHIND the canvas: the canvas is transparent until the
+	* engine draws, and covers them from then on.
+	* Sizes follow the canvas: 1em of #canvas-container is 1 % of its width
+	* (set by the script at the end of the page; the font-size here is what
+	* applies until it has run).
+	*/
+	html, body {
+		background-color: #000000;
+	}
+
+	#app-container.canvas-app-container {
+		background: #000000;
+		filter: none;
+	}
+
+	#canvas-container {
+		font-size: 1vw;
+		font-family: Roboto, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+	}
+
+	#canvas {
+		position: relative;
+		z-index: 1;
+		background-image: none;      /* the splash image of game.project is not shown */
+	}
+
+	#dd-loading {
+		position: absolute;
+		left: 0;
+		top: 0;
+		width: 100%;
+		height: 100%;
+		z-index: 0;
+		overflow: hidden;
+		pointer-events: none;
+	}
+
+	#dd-loading div {
+		position: absolute;
+		left: 11.72%;
+		line-height: 1;
+		white-space: nowrap;
+		transform: translateY(-50%);
+	}
+
+	#dd-loading-name {
+		top: 9.75%;
+		font-size: 1em;
+		color: #9e9e9e;
+		text-transform: uppercase;
+	}
+
+	#dd-loading-text {
+		top: 14.25%;
+		font-size: 2.125em;
+		color: #ffffff;
+	}
+
+	/* the loader's own progress bar: thin, under the texts */
+	#canvas-container .canvas-app-progress {
+		left: 11.72%;
+		top: 19%;
+		width: 9.375%;
+		height: 2px;
+		height: max(2px, 0.16em);
+		margin-top: 0;
+		z-index: 2;
+		background-color: #575757;
+	}
+
+	#canvas-container .canvas-app-progress-bar {
+		height: 100%;
+		background-color: #2b80c9;
+	}
+
+	/* a page that only says what is wrong has no "Loading ..." under it */
+	#running-from-file-warning[style*="block"] ~ #canvas-container #dd-loading,
+	#webgl-not-supported[style*="block"] ~ #canvas-container #dd-loading,
+	#webgl-not-supported[style*="block"] ~ #canvas-container .canvas-app-progress {
+		display: none;
+	}
+
+	#running-from-file-warning, #webgl-not-supported {
+		color: #e0e0e0;
+		font-family: Roboto, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+	}
+
+	/* Opened as a file the page has no size (the loader, which gives it one, is not started),
+	* so the warning could not be seen: let the page flow like an ordinary one then. */
+	body:has(#running-from-file-warning[style*="block"]) {
+		position: static;
+	}
+
+	#app-container:has(#running-from-file-warning[style*="block"]) {
+		position: static;
+		width: auto;
+		height: auto;
+		overflow: visible;
+	}
+
+	#app-container:has(#running-from-file-warning[style*="block"]) #canvas-container,
+	#app-container:has(#running-from-file-warning[style*="block"]) .buttons-background {
+		display: none;
+	}
+
+	/* the bar under the canvas with "Fullscreen" and "Made with Defold" */
+	.buttons-background {
+		background-color: #000000;
+	}
+
+	.link {
+		color: #9e9e9e;
+	}
+
+	a {
+		color: #5aa7e6;
+	}
+
+	.button {
+		color: #9e9e9e;
+		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath d='M3,11.5 C3,11.776 3.224,12 3.5,12 L12.5,12 C12.776,12 13,11.776 13,11.5 L13,4.5 C13,4.224 12.776,4 12.5,4 L3.5,4 C3.224,4 3,4.224 3,4.5 L3,11.5 Z M14,11 L14,13 L12,13 C11.724,13 11.5,13.224 11.5,13.5 C11.5,13.776 11.724,14 12,14 L14.5,14 C14.776,14 15,13.776 15,13.5 L15,11 C15,10.724 14.776,10.5 14.5,10.5 C14.224,10.5 14,10.724 14,11 Z M12,2 C11.724,2 11.5,2.224 11.5,2.5 C11.5,2.776 11.724,3 12,3 L14,3 L14,5 C14,5.276 14.224,5.5 14.5,5.5 C14.776,5.5 15,5.276 15,5 L15,2.5 C15,2.224 14.776,2 14.5,2 L12,2 Z M2,13 L2,11 C2,10.724 1.776,10.5 1.5,10.5 C1.224,10.5 1,10.724 1,11 L1,13.5 C1,13.776 1.224,14 1.5,14 L4,14 C4.276,14 4.5,13.776 4.5,13.5 C4.5,13.224 4.276,13 4,13 L2,13 Z M1,2.5 C1,2.224 1.224,2 1.5,2 L4,2 C4.276,2 4.5,2.224 4.5,2.5 C4.5,2.776 4.276,3 4,3 L2,3 L2,5 C2,5.276 1.776,5.5 1.5,5.5 C1.224,5.5 1,5.276 1,5 L1,2.5 Z' fill='%239e9e9e'/%3E%3C/svg%3E");
+	}
 	</style>
 </head>
 
@@ -81,6 +208,11 @@
 			<p>WebGL is not supported by your browser - visit <a href="https://get.webgl.org/">https://get.webgl.org/</a> to learn more.</p>
 		</div>
 		<div id="canvas-container" class="canvas-app-canvas-container">
+			<!-- What is shown while the engine is downloaded; it lies behind the canvas (see the style rules) -->
+			<div id="dd-loading" aria-hidden="true">
+				<div id="dd-loading-name">{{project.title}}</div>
+				<div id="dd-loading-text">Loading &hellip;</div>
+			</div>
 			<canvas id="canvas" class="canvas-app-canvas" tabindex="1" width="{{display.width}}" height="{{display.height}}"></canvas>
 		</div>
 		<div class="buttons-background">
@@ -104,6 +236,33 @@
 			EngineLoader.load("canvas", "{{exe-name}}");
 			runningFromFileWarning.parentNode.removeChild(runningFromFileWarning);
 		}
+	</script>
+
+	<script id='dd-loading-script' type='text/javascript'>
+		/* The loading page: the texts follow the size of the canvas, and "Loading ..." is
+		   written in Swedish in a Swedish browser. Nothing here is needed for the engine to load. */
+		(function () {
+			var container = document.getElementById("canvas-container");
+			var text = document.getElementById("dd-loading-text");
+			if (!container || !text) {
+				return;
+			}
+			if (/^sv\b/i.test(navigator.language || "")) {
+				text.textContent = "Laddar \u2026";
+			}
+			function fit() {
+				var width = container.clientWidth;
+				if (width > 0) {
+					container.style.fontSize = (width / 100) + "px";
+				}
+			}
+			fit();
+			window.addEventListener("resize", function () { setTimeout(fit, 0); });
+			window.addEventListener("load", fit);
+			if (typeof ResizeObserver === "function") {
+				new ResizeObserver(fit).observe(container);
+			}
+		})();
 	</script>
 </body>
 </html>

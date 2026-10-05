@@ -22,6 +22,17 @@ require "dd-gui.ddgui"
 
 4. Call widget functions inside `on_input(self, action_id, action)`. Every widget that takes input must be called every frame inside `on_input`.
 
+### HTML5 template
+
+`dd-gui/HTML/engine_template.html` is an HTML5 template with a loading page in the same dark look: black, the title of the project in small capitals, "Loading …" ("Laddar …" in a Swedish browser) and a thin progress bar, where the loading screen of an application built with these widgets has them. To use it, point `game.project` at it:
+
+```
+[html5]
+htmlfile = /dd-gui/HTML/engine_template.html
+```
+
+The splash image of `game.project` is not shown. Nothing in how the engine is loaded differs from Defold's own template; the texts lie behind the canvas, which covers them when the engine starts to draw.
+
 ---
 
 ## Global settings
@@ -448,6 +459,7 @@ end
 - `D.setAccent(color)`; the marker of the chosen row in a dropdown list and a slider given a value in `init()` now follow `D.colors`
 - A focus left behind by an unloaded gui scene no longer locks the widgets of the next scene
 - `D.check_device` runs when the module is loaded
+- HTML5: `dd-gui/HTML/engine_template.html` shows a dark loading page (the project's title, "Loading …" and a thin progress bar) instead of Defold's white page with the splash image
 - `D.colors.active`, `hover`, `select` and `inactive` are now the button colors (they used to be shared by all widgets)
 
 **0.4.0**
