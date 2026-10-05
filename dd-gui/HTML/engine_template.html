@@ -175,6 +175,38 @@
 		display: none;
 	}
 
+	/* ---- Fullscreen ----------------------------------------------------------
+	* "Fullscreen" shows #canvas-container over the whole screen. The canvas fills
+	* it, whatever the browser says the size of the screen is (see #dd-canvas-box
+	* in the page). Each rule is written twice: a browser that does not know one of
+	* the two names would otherwise throw away the whole rule.
+	*/
+	#canvas-container:fullscreen {
+		width: 100% !important;
+		height: 100% !important;
+		margin: 0 !important;
+		background-color: #000000;
+	}
+
+	#canvas-container:-webkit-full-screen {
+		width: 100% !important;
+		height: 100% !important;
+		margin: 0 !important;
+		background-color: #000000;
+	}
+
+	#canvas-container:fullscreen #dd-canvas-box,
+	#canvas-container:fullscreen #canvas {
+		width: 100% !important;
+		height: 100% !important;
+	}
+
+	#canvas-container:-webkit-full-screen #dd-canvas-box,
+	#canvas-container:-webkit-full-screen #canvas {
+		width: 100% !important;
+		height: 100% !important;
+	}
+
 	/* the bar under the canvas with "Fullscreen" and "Made with Defold" */
 	.buttons-background {
 		background-color: #000000;
@@ -213,7 +245,12 @@
 				<div id="dd-loading-name">{{project.title}}</div>
 				<div id="dd-loading-text">Loading &hellip;</div>
 			</div>
-			<canvas id="canvas" class="canvas-app-canvas" tabindex="1" width="{{display.width}}" height="{{display.height}}"></canvas>
+			<!-- The canvas has a box of its own so that it is not a direct child of the element that goes
+			     fullscreen (#canvas-container): the engine then leaves the size of the canvas to the style
+			     rules, and it fills the screen also on an iPad. The box must not be positioned. -->
+			<div id="dd-canvas-box">
+				<canvas id="canvas" class="canvas-app-canvas" tabindex="1" width="{{display.width}}" height="{{display.height}}"></canvas>
+			</div>
 		</div>
 		<div class="buttons-background">
 {{#html5.show_fullscreen_button}}
@@ -262,6 +299,64 @@
 			if (typeof ResizeObserver === "function") {
 				new ResizeObserver(fit).observe(container);
 			}
+		})();
+	</script>
+
+	<script id='dd-fullscreen-script' type='text/javascript'>
+		/* Fullscreen: keeps the size of the canvas right when the window does not change size as
+		   fullscreen is entered or left (the loader and the engine only look again when it does).
+		   Nothing here is needed for fullscreen to start - that is the engine's own
+		   Module.toggleFullscreen() - and all of it is skipped if the loader looks different. */
+		(function () {
+			var canvas = document.getElementById("canvas");
+			if (!canvas) {
+				return;
+			}
+			function isFullscreen() {
+				return !!(document.fullscreenElement || document.webkitFullscreenElement ||
+					document.webkitCurrentFullScreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+			}
+			var wasFullscreen = false;
+			function sync() {
+				try {
+					if (isFullscreen()) {
+						wasFullscreen = true;
+						/* the engine draws for the whole window in fullscreen; ask it to measure again
+						   (what it does itself when fullscreen starts) if it has an older size */
+						if (typeof GLFW !== "undefined" && GLFW.isFullscreen) {
+							var dpi = GLFW.dpi || 1;
+							if (canvas.width !== Math.floor(window.innerWidth * dpi) || canvas.height !== Math.floor(window.innerHeight * dpi)) {
+								GLFW.prevWidth = 0;
+								GLFW.prevHeight = 0;
+							}
+						}
+					}
+					else if (typeof CUSTOM_PARAMETERS !== "undefined" && typeof CUSTOM_PARAMETERS.resize_window_callback === "function") {
+						/* back in the page: let the loader lay the page out again - once even if the
+						   window has the size it had, after that only if it has changed */
+						if (wasFullscreen) {
+							wasFullscreen = false;
+							CUSTOM_PARAMETERS.resize_window_prev_inner_width = -1;
+							CUSTOM_PARAMETERS.resize_window_prev_inner_height = -1;
+						}
+						CUSTOM_PARAMETERS.resize_window_callback();
+					}
+				}
+				catch (e) {
+				}
+			}
+			function changed() {
+				setTimeout(sync, 0);
+				setTimeout(sync, 300);
+				setTimeout(sync, 1000);
+			}
+			document.addEventListener("fullscreenchange", changed);
+			document.addEventListener("webkitfullscreenchange", changed);
+			window.addEventListener("orientationchange", function () {
+				if (isFullscreen()) {
+					changed();
+				}
+			});
 		})();
 	</script>
 </body>

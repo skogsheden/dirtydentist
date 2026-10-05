@@ -31,7 +31,7 @@ require "dd-gui.ddgui"
 htmlfile = /dd-gui/HTML/engine_template.html
 ```
 
-The splash image of `game.project` is not shown. Nothing in how the engine is loaded differs from Defold's own template; the texts lie behind the canvas, which covers them when the engine starts to draw.
+The splash image of `game.project` is not shown. Nothing in how the engine is loaded differs from Defold's own template; the texts lie behind the canvas, which covers them when the engine starts to draw. The canvas lies in a box of its own (`#dd-canvas-box`), which lets "Fullscreen" fill the screen on an iPad as well.
 
 ---
 
@@ -460,6 +460,7 @@ end
 - A focus left behind by an unloaded gui scene no longer locks the widgets of the next scene
 - `D.check_device` runs when the module is loaded
 - HTML5: `dd-gui/HTML/engine_template.html` shows a dark loading page (the project's title, "Loading …" and a thin progress bar) instead of Defold's white page with the splash image
+- HTML5: "Fullscreen" fills the screen on an iPad too (the canvas was drawn small in a corner of the fullscreen window when the device was held in landscape, or when the browser shared the screen with another app)
 - `D.colors.active`, `hover`, `select` and `inactive` are now the button colors (they used to be shared by all widgets)
 
 **0.4.0**
